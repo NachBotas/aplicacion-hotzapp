@@ -56,6 +56,7 @@
       listShowStage: false, // etapa del CRM de Whazaa al lado del nombre (por defecto se usan las etiquetas de WhatsApp)
       listShowLabels: true, // etiquetas de WhatsApp Business
       listShowTimer: true, // temporizador de espera
+      headerLabels: true, // botón "Etiquetas" en la cabecera del chat
       listShowFollow: true, // etiqueta "↩ sin respuesta" para seguimiento
       followMinutes: 60, // a partir de cuándo un chat necesita seguimiento
       tutorialSeen: false

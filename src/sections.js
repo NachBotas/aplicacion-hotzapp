@@ -471,6 +471,7 @@
         <h3 class="sec2">Lista de chats</h3>
         ${sw('listShowStage', 'Mostrar también la etapa del CRM de Whazaa (opcional)')}
         ${sw('listShowLabels', 'Mostrar las etiquetas de WhatsApp al lado del nombre')}
+        ${sw('headerLabels', 'Botón “🏷️ Etiquetas” arriba del chat (Alt+E)')}
         ${sw('listShowTimer', 'Mostrar el temporizador de espera (⏱)')}
         ${sw('listShowFollow', 'Mostrar “↩ sin respuesta” para hacer seguimiento')}
         <h3 class="sec2">Panel</h3>

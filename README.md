@@ -8,7 +8,7 @@ Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 - **Varios chats a la vez y botón ⏹ para cancelar**: cada envío aparece abajo, a la derecha de la barra, con cuenta regresiva; tocá la ✕ para cancelarlo (o "Cancelar todo").
 - **Secuencias completas en un solo lugar**: dentro de la secuencia creás cada mensaje (texto, audio, imagen, video, documento o contacto) sin tener que crearlos antes por separado; también podés sumar respuestas ya guardadas.
 - **Temporizadores en las secuencias** ("⏱ Agregar temporizador") y "escribiendo…" configurable en los textos.
-- **Etiquetas de WhatsApp Business**: se muestran al lado de cada nombre en la lista de chats y se ponen, sacan o crean desde ☰ → Datos del lead (quedan guardadas en WhatsApp y se ven en el celular).
+- **Etiquetas de WhatsApp Business**: botón **🏷️ Etiquetas** en la cabecera del chat (o Alt+E) para poner, sacar o crear etiquetas con un toque; se muestran al lado de cada nombre en la lista de chats (también desde ☰ → Datos del lead) (quedan guardadas en WhatsApp y se ven en el celular).
 - **"No es un lead"** (equipo, proveedor, personal): no cuenta en métricas, seguimiento ni esperando. **"Conversación terminada"**: sale de seguimiento/esperando hasta que esa persona vuelva a escribir. Botones ✓ y 🚫 en las listas de Seguimiento y Esperando, y en Datos del lead.
 - **Barra de chips debajo del chat** con filtro (solo favoritos, por tipo), estilo ícono/color, "Mensaje sale directo" y "Secuencia sale directo".
 - **Atajo `;`** en la caja de mensaje (por ej. `;hola` + Enter).
@@ -80,6 +80,7 @@ src/engine.js         Motor de envíos: rápido (WA-JS) o compatibilidad, cola p
 src/bridge.js         Puente con WA-JS dentro de la página
 src/wpp-config.js     Configuración de WA-JS (sin analíticas ni servidores externos)
 src/deco.js           Etiquetas y temporizador al lado de cada chat
+src/labelbtn.js       Botón "Etiquetas" en la cabecera del chat (Alt+E)
 lib/                  WA-JS (WPPConnect, Apache 2.0)
 src/editor.js         Editor de respuestas (7 tipos)
 src/sections.js       Menú, Respuestas, Pendientes, Agenda, Datos del lead, Notas, Herramientas y CRM

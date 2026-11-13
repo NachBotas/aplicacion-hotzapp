@@ -24,6 +24,7 @@
         <tr><td>${K('↑')} ${K('↓')}</td><td>Moverse por la lista de respuestas.</td></tr>
         <tr><td>${K('Esc')}</td><td>Cerrar la lista o una ventana.</td></tr>
         <tr><td>${K('Ctrl')}+${K('Enter')}</td><td>Guardar una nota (en Notas).</td></tr>
+        <tr><td>${K('Alt')}+${K('E')}</td><td>Abrir las etiquetas de WhatsApp del chat abierto para poner o sacar.</td></tr>
         <tr><td>Clic en un chip</td><td>Envía la respuesta al chat abierto.</td></tr>
         <tr><td>Secuencias</td><td>Se tocan <b>dos veces</b> para enviar (o activá “Secuencia sale directo” en el filtro de la barra).</td></tr>
       </table>
@@ -79,7 +80,8 @@
       icon: 'kanban', title: 'Etiquetas de WhatsApp y datos del lead',
       body: `<ul>
         <li><b>Etiquetas</b>: Whazaa usa <b>las etiquetas de tu WhatsApp Business</b> y las muestra al lado de cada nombre en la lista de chats.</li>
-        <li>Para ponerlas o sacarlas: abrí el chat → ☰ → <b>Datos del lead</b> → tocá la etiqueta. Con <b>+ Nueva etiqueta</b> creás una nueva (se crea en WhatsApp y aparece también en tu celular).</li>
+        <li><b>La forma rápida</b>: en la cabecera del chat (al lado de “Añadir a la lista”) está el botón <b>🏷️ Etiquetas</b>. Tocalo —o apretá ${K('Alt')}+${K('E')}— y con un toque ponés o sacás cada etiqueta. Con <b>+ Nueva etiqueta</b> creás una (se crea en WhatsApp y aparece también en tu celular).</li>
+        <li>También desde ☰ → <b>Datos del lead</b>.</li>
         <li><b>Datos del lead</b>: teléfono, email, empresa, valor y origen del chat abierto.</li>
         <li><b>CRM</b> (opcional): tablero de Whazaa con etapas, para arrastrar contactos entre Nuevo lead, Propuesta, Cerrado, etc.</li>
         <li><b>Notas</b>: notas de cada conversación (el número en la barrita indica cuántas tiene el chat abierto).</li>
