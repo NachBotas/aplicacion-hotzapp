@@ -313,6 +313,9 @@
     ['value', 'Valor del negocio', 'Ej.: 150000'],
     ['source', 'Origen', 'Ej.: Instagram, anuncio, referido']
   ];
+  let newLabelOpen = false;
+  let palette = [];
+  let newColor = '';
   V.lead = {
     render(head, body) {
       head.innerHTML = app.header('Datos del lead');
@@ -320,15 +323,82 @@
       if (!chat) { body.innerHTML = noChat; return; }
       const c = S().contacts[chat] || {};
       if (!c.phone && /^[+\d\s()-]{8,}$/.test(chat)) c.phone = chat;
+      const mine = new Set((app.waLabels[chat] || []).map((l) => l.id));
+      const sup = app.waLabelsSupported;
+      const done = HZ.isDone ? HZ.isDone(chat) : !!c.closedAt;
+      const labelsHtml = sup === false || !(HZ.api && HZ.api.ready)
+        ? `<p class="hint">${HZ.api && HZ.api.ready ? 'Las etiquetas existen sólo en <b>WhatsApp Business</b>. Con WhatsApp común podés usar la <b>Etapa del CRM</b> de abajo.' : 'Las etiquetas de WhatsApp se cargan cuando el motor rápido está activo.'}</p>`
+        : `<div class="chips" style="margin-top:0">${app.waLabelsAll.map((l) => {
+            const on = mine.has(l.id);
+            return `<button class="vchip" data-wlabel="${esc(l.id)}" data-on="${on ? 1 : 0}" style="border-color:${esc(l.color)};${on ? `background:${esc(l.color)};color:#fff;font-weight:700` : `color:${esc(l.color)}`}">${on ? '✓ ' : ''}${esc(l.name)}</button>`;
+          }).join('')}
+          <button class="vchip" data-newlabel style="border-style:dashed">+ Nueva etiqueta</button></div>
+          ${newLabelOpen ? `<div class="item" style="margin-top:8px"><input data-nlname placeholder="Nombre de la etiqueta (ej.: Cliente VIP)">
+            <div class="chips" style="margin-top:8px">${palette.slice(0, 20).map((col) => `<button class="vchip" data-nlcolor="${esc(col)}" style="width:22px;height:22px;padding:0;border-radius:50%;background:${esc(col)};${newColor === col ? 'outline:2px solid #fff' : ''}"></button>`).join('')}</div>
+            <div class="row" style="margin-top:8px;justify-content:flex-end"><button class="btn sm gray" data-nlcancel>Cancelar</button><button class="btn sm" data-nlsave>Crear en WhatsApp</button></div></div>` : ''}
+          <p class="hint" style="margin-top:6px">Son las etiquetas de tu WhatsApp Business: tocá una para ponerla o sacarla. Se sincronizan con tu celular.</p>`;
       body.innerHTML = `
         <div class="item" style="margin-bottom:14px"><div class="t">💬 ${esc(chat)}</div><div class="m">${(S().notes[chat] || []).length} notas · <a href="#" data-goview="notes" style="color:#7aa7ff;text-decoration:none">ver notas</a></div></div>
-        ${(app.waLabels[chat] || []).length ? `<div class="field"><label>Etiquetas de WhatsApp</label><div class="chips">${app.waLabels[chat].map((l) => `<span class="vchip" style="cursor:default;border-color:${esc(l.color)};color:${esc(l.color)}">${esc(l.name)}</span>`).join('')}</div></div>` : ''}
-        <div class="field"><label>Etapa del CRM</label><select data-lf="stageId"><option value="">Sin etapa</option>
+
+        <div class="field"><label>Etiquetas de WhatsApp</label>${labelsHtml}</div>
+
+        <div class="field"><label>Estado del contacto</label>
+          <div class="item" style="margin:0">
+            <div class="pref" style="padding:2px 0"><span class="grow">🚫 <b>No es un lead</b><div class="m" style="margin:2px 0 0">Equipo, proveedor, personal… No cuenta en métricas, seguimiento ni esperando.</div></span><div class="sw ${c.notLead ? 'on' : ''}" data-notlead><span class="tr"></span></div></div>
+            ${c.notLead ? `<div class="seg" style="margin:6px 0 4px">${Object.entries(app.NOTLEAD_KINDS).map(([k, l]) => `<button data-nlkind="${k}" class="${c.notLead === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
+            <div style="border-top:1px solid var(--line);margin:8px 0"></div>
+            <div class="pref" style="padding:2px 0"><span class="grow">✓ <b>Conversación terminada</b><div class="m" style="margin:2px 0 0">${done ? `Terminada el ${new Date(c.closedAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}. Vuelve a aparecer si te escribe.` : 'Deja de aparecer en Esperando y Seguimiento hasta que te vuelva a escribir.'}</div></span>
+              <button class="btn sm ${done ? 'ghost' : ''}" data-done="${done ? 0 : 1}">${done ? '↺ Reactivar' : 'Terminar'}</button></div>
+          </div></div>
+
+        <div class="field"><label>Etapa del CRM <span class="opt">(tablero de Whazaa)</span></label><select data-lf="stageId"><option value="">Sin etapa</option>
           ${S().stages.map((s) => `<option value="${s.id}" ${c.stageId === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
         ${LEAD_FIELDS.map(([k, l, ph]) => `<div class="field"><label>${l}</label><input data-lf="${k}" value="${esc(c[k] || '')}" placeholder="${ph}"></div>`).join('')}
         <p class="hint">Se guarda solo. El teléfono se usa en la variable “Teléfono”.</p>`;
     }
   };
+  body.addEventListener('click', async (e) => {
+    if (app.view !== 'lead') return;
+    const t = e.target.closest('[data-wlabel],[data-newlabel],[data-nlcolor],[data-nlcancel],[data-nlsave],[data-notlead],[data-nlkind],[data-done]');
+    if (!t) return;
+    const chat = wa.chatTitle();
+    if (!chat) return;
+    if (t.dataset.notlead !== undefined) return app.setNotLead(chat, (S().contacts[chat] || {}).notLead ? '' : 'otro');
+    if (t.dataset.nlkind) return app.setNotLead(chat, t.dataset.nlkind);
+    if (t.dataset.done) return app.setDone(chat, t.dataset.done === '1');
+    if (t.dataset.newlabel !== undefined) {
+      newLabelOpen = !newLabelOpen;
+      if (newLabelOpen && !palette.length) palette = (await HZ.api.call('labelPalette').catch(() => [])) || [];
+      newColor = palette[0] || '';
+      app.render();
+      const inp = body.querySelector('[data-nlname]');
+      if (inp) inp.focus();
+      return;
+    }
+    if (t.dataset.nlcolor) { newColor = t.dataset.nlcolor; body.querySelectorAll('[data-nlcolor]').forEach((b) => (b.style.outline = b === t ? '2px solid #fff' : '')); return; }
+    if (t.dataset.nlcancel !== undefined) { newLabelOpen = false; return app.render(); }
+    try {
+      let chatId = app.waChatIds[chat];
+      if (!chatId) { const a = await HZ.api.call('activeChat'); chatId = a && a.id; }
+      if (!chatId) throw new Error('No encontré el chat');
+      if (t.dataset.nlsave !== undefined) {
+        const name = (body.querySelector('[data-nlname]').value || '').trim();
+        if (!name) return app.status('Poné un nombre para la etiqueta', 'err');
+        const l = await HZ.api.call('newLabel', name, newColor || undefined);
+        if (l) await HZ.api.call('setLabel', chatId, l.id, true);
+        newLabelOpen = false;
+        app.status(`🏷️ Etiqueta “${name}” creada en WhatsApp`, 'ok');
+      } else {
+        const add = t.dataset.on !== '1';
+        await HZ.api.call('setLabel', chatId, t.dataset.wlabel, add);
+        app.status(add ? '🏷️ Etiqueta puesta' : '🏷️ Etiqueta quitada', 'ok');
+      }
+      await app.reloadLabels();
+      app.render();
+    } catch (err) {
+      app.status('⚠️ No se pudo cambiar la etiqueta: ' + err.message, 'err');
+    }
+  });
   body.addEventListener('change', async (e) => {
     const k = e.target.dataset.lf;
     if (!k || app.view !== 'lead') return;
@@ -399,8 +469,8 @@
           : '⚠️ <b>Motor rápido no disponible</b><div class="m">Se está usando el modo compatibilidad (hace clic en WhatsApp, un envío a la vez, en el chat abierto). Recargá WhatsApp Web; si sigue así, puede que una actualización de WhatsApp lo haya roto.</div>'}</div>
         <div class="pref"><span class="grow">Modo de envío</span><div class="seg"><button data-mode="fast" class="${s.sendMode !== 'dom' ? 'on' : ''}">Rápido</button><button data-mode="dom" class="${s.sendMode === 'dom' ? 'on' : ''}">Compatibilidad</button></div></div>
         <h3 class="sec2">Lista de chats</h3>
-        ${sw('listShowStage', 'Mostrar la etapa del CRM al lado del nombre')}
-        ${sw('listShowLabels', 'Mostrar las etiquetas de WhatsApp Business')}
+        ${sw('listShowStage', 'Mostrar también la etapa del CRM de Whazaa (opcional)')}
+        ${sw('listShowLabels', 'Mostrar las etiquetas de WhatsApp al lado del nombre')}
         ${sw('listShowTimer', 'Mostrar el temporizador de espera (⏱)')}
         ${sw('listShowFollow', 'Mostrar “↩ sin respuesta” para hacer seguimiento')}
         <h3 class="sec2">Panel</h3>

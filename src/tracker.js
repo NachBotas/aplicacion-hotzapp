@@ -243,15 +243,28 @@
     return mn;
   }
 
+  // "No es un lead" (equipo, proveedor…): no cuenta en nada.
+  const notLead = (name) => !!(app.state.contacts[name] && app.state.contacts[name].notLead);
+  // "Conversación terminada": no aparece en esperando/seguimiento hasta que el
+  // cliente vuelva a escribir después de marcarla.
+  function isDone(name, evs) {
+    const c = app.state.contacts[name];
+    if (!c || !c.closedAt) return false;
+    return !evs.some((e) => !e[1] && e[0] > c.closedAt);
+  }
+  HZ.isDone = (name) => !!track[name] && isDone(name, sortedEvents(track[name]));
+
   // Quién está esperando respuesta ahora
   function waiting() {
     const out = [];
     for (const [name, r] of Object.entries(track)) {
       if (r.g && !includeGroups()) continue;
+      if (notLead(name)) continue;
       const ls = listState[name];
       if (ls && ls.mine) continue;
       const evs = sortedEvents(r);
       if (!evs.length || evs[evs.length - 1][1]) continue;
+      if (isDone(name, evs)) continue;
       let since = evs[evs.length - 1][0];
       for (let i = evs.length - 1; i >= 0 && !evs[i][1]; i--) since = evs[i][0];
       out.push({ name, since, wait: Date.now() - since });
@@ -269,11 +282,13 @@
       if (r.g && !includeGroups()) continue;
       const c = app.state.contacts[name];
       if (c && CLOSED.has(c.stageId)) continue;
+      if (notLead(name)) continue;
       const ls = listState[name];
       if (ls && ls.unread) continue;
       const evs = sortedEvents(r);
       const last = evs[evs.length - 1];
       if (!last || !last[1]) continue;
+      if (isDone(name, evs)) continue;
       const wait = now - last[0];
       if (wait >= minMs && wait <= 30 * DAY) out.push({ name, since: last[0], wait });
     }
@@ -284,8 +299,10 @@
   function compute(from, to) {
     const chats = [];
     const rts = [];
+    let excluded = 0;
     for (const [name, r] of Object.entries(track)) {
       if (r.g && !includeGroups()) continue;
+      if (notLead(name)) { if (Object.values(r.ev).some((e) => e[0] >= from && e[0] <= to)) excluded++; continue; }
       const evs = sortedEvents(r);
       if (!evs.length) continue;
       const inP = evs.filter((e) => e[0] >= from && e[0] <= to);
@@ -324,6 +341,7 @@
     return {
       from, to,
       conversations: chats.length,
+      excluded,
       newConversations: chats.filter((c) => c.isNew).length,
       newByClient: chats.filter((c) => c.startedBy === 'client').length,
       newByMe: chats.filter((c) => c.startedBy === 'me').length,

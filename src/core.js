@@ -136,6 +136,28 @@
     await app.save({ contacts });
   };
 
+  // ---------- estado del contacto: no es lead / conversación terminada ----------
+  app.NOTLEAD_KINDS = { equipo: 'Equipo', proveedor: 'Proveedor', personal: 'Personal', otro: 'No es lead' };
+  app.setNotLead = async (name, kind) => {
+    if (!name) return;
+    const contacts = { ...app.state.contacts };
+    const c = { ...(contacts[name] || {}) };
+    if (kind) c.notLead = kind; else delete c.notLead;
+    c.updatedAt = Date.now();
+    contacts[name] = c;
+    await app.save({ contacts });
+    app.status(kind ? `🚫 ${name}: ${app.NOTLEAD_KINDS[kind] || 'no es lead'} (no cuenta en métricas)` : `✓ ${name} vuelve a contar como lead`, 'ok');
+  };
+  app.setDone = async (name, done) => {
+    if (!name) return;
+    const contacts = { ...app.state.contacts };
+    const c = { ...(contacts[name] || {}) };
+    if (done) c.closedAt = Date.now(); else delete c.closedAt;
+    contacts[name] = c;
+    await app.save({ contacts });
+    app.status(done ? `✓ Conversación con ${name} terminada (vuelve si te escribe)` : `↺ Conversación con ${name} reactivada`, 'ok');
+  };
+
   // ---------- motor de envío ----------
   const queue = [];
   let busy = false;

@@ -76,12 +76,13 @@
       body: `<p>Cada envío aparece a la <b>derecha de la barra de abajo</b> con el chat, qué está haciendo y la cuenta regresiva. Tocá la <b>✕</b> para cancelarlo, o <b>Cancelar todo</b> si hay varios. Podés mandar a varios chats a la vez.</p>`
     },
     {
-      icon: 'kanban', title: 'CRM, etiquetas y datos del lead',
+      icon: 'kanban', title: 'Etiquetas de WhatsApp y datos del lead',
       body: `<ul>
-        <li><b>CRM</b>: tablero con etapas (Nuevo lead, En conversación, Propuesta enviada, Cerrado, Perdido). Arrastrá los contactos entre etapas; podés cambiar nombres, colores y crear etapas.</li>
-        <li><b>Datos del lead</b> (☰ → Datos del lead): etapa, teléfono, email, empresa, valor y origen del chat abierto.</li>
+        <li><b>Etiquetas</b>: Whazaa usa <b>las etiquetas de tu WhatsApp Business</b> y las muestra al lado de cada nombre en la lista de chats.</li>
+        <li>Para ponerlas o sacarlas: abrí el chat → ☰ → <b>Datos del lead</b> → tocá la etiqueta. Con <b>+ Nueva etiqueta</b> creás una nueva (se crea en WhatsApp y aparece también en tu celular).</li>
+        <li><b>Datos del lead</b>: teléfono, email, empresa, valor y origen del chat abierto.</li>
+        <li><b>CRM</b> (opcional): tablero de Whazaa con etapas, para arrastrar contactos entre Nuevo lead, Propuesta, Cerrado, etc.</li>
         <li><b>Notas</b>: notas de cada conversación (el número en la barrita indica cuántas tiene el chat abierto).</li>
-        <li>En la <b>lista de chats</b>, al lado de cada nombre, se ve la etapa del CRM y las etiquetas de WhatsApp Business.</li>
       </ul>`
     },
     {
@@ -93,6 +94,9 @@
         <li>Tocá un filtro para ver la lista y tocá un chat para abrirlo.</li>
         <li>En la lista de chats aparece la etiqueta <b style="color:#f5b74a">↩ 2 h</b> o <b style="color:#fca5a5">⏱ 25 min</b> al lado de cada nombre.</li>
         <li>Los tiempos se cambian en ☰ → Estadísticas → Avisos.</li>
+        <li><b>✓ Conversación terminada</b>: el chat deja de aparecer en Seguimiento y Esperando <b>hasta que esa persona te vuelva a escribir</b>; ahí se activa solo.</li>
+        <li><b>🚫 No es un lead</b> (equipo, proveedor, personal): no aparece en Seguimiento ni Esperando y <b>no cuenta en las métricas</b>.</li>
+        <li>Los dos botones están en cada fila de las listas de Seguimiento/Esperando, y en ☰ → Datos del lead → Estado del contacto.</li>
       </ul>`
     },
     {

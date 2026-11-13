@@ -53,7 +53,7 @@
       waitMinutes: 15,
       statsGroups: false,
       sendMode: 'fast', // 'fast' = WA-JS (rápido, varios chats a la vez) | 'dom' = compatibilidad
-      listShowStage: true, // etiqueta del CRM al lado del nombre
+      listShowStage: false, // etapa del CRM de Whazaa al lado del nombre (por defecto se usan las etiquetas de WhatsApp)
       listShowLabels: true, // etiquetas de WhatsApp Business
       listShowTimer: true, // temporizador de espera
       listShowFollow: true, // etiqueta "↩ sin respuesta" para seguimiento
@@ -96,6 +96,12 @@
       const def = HZ.DEFAULTS[k];
       out[k] = data[k] === undefined ? structuredClone(def) : data[k];
       if (k === 'settings') out[k] = { ...def, ...out[k] };
+    }
+    // v3.1: en la lista de chats se usan las etiquetas de WhatsApp, no las etapas de Whazaa
+    if (!out.settings.labelsV31) {
+      out.settings.listShowStage = false;
+      out.settings.labelsV31 = true;
+      await chrome.storage.local.set({ settings: out.settings });
     }
     const migrated = migrate(out.replies);
     if (migrated) {

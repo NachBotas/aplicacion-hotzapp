@@ -10,19 +10,31 @@
   const esc = HZ.escape;
   const MIN = 60000;
 
-  app.waLabels = {}; // { [nombreDelChat]: [{ name, color }] }
+  app.waLabels = {}; // { [nombreDelChat]: [{ id, name, color }] }
+  app.waLabelsAll = []; // todas las etiquetas de WhatsApp Business
+  app.waLabelsSupported = null; // null = todavía no sabemos
+  app.waChatIds = {}; // { [nombreDelChat]: chatId }
 
   async function loadLabels() {
-    if (!HZ.api || !HZ.api.ready || !app.state.settings.listShowLabels) return;
+    if (!HZ.api || !HZ.api.ready) return;
     try {
-      const list = await HZ.api.call('labels');
+      const res = await HZ.api.call('labels');
+      const byId = Object.fromEntries((res.all || []).map((l) => [l.id, l]));
       const map = {};
-      for (const c of list || []) map[c.name] = c.labels;
-      const changed = JSON.stringify(map) !== JSON.stringify(app.waLabels);
+      for (const c of res.chats || []) {
+        map[c.name] = c.labels.map((id) => byId[id]).filter(Boolean);
+        app.waChatIds[c.name] = c.id;
+      }
+      const sig = JSON.stringify([res.supported, res.all, map]);
+      const changed = sig !== app._labelsSig;
+      app._labelsSig = sig;
       app.waLabels = map;
+      app.waLabelsAll = res.all || [];
+      app.waLabelsSupported = !!res.supported;
       if (changed) { paint(); if (app.open && app.view === 'lead') app.render(); }
     } catch (_) {}
   }
+  app.reloadLabels = loadLabels;
 
   const chip = (text, color, solid) =>
     `<span style="display:inline-block;flex:none;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 6px;border-radius:8px;font-size:10.5px;font-weight:700;line-height:16px;${
@@ -82,7 +94,7 @@
     paint();
     setInterval(paint, 2000);
     setTimeout(loadLabels, 6000);
-    setInterval(loadLabels, 30000);
+    setInterval(loadLabels, 20000);
   });
   app.onState = app.onState || [];
   app.onState.push(paint);

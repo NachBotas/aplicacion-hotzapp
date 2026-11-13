@@ -29,6 +29,8 @@
     .fi2:hover { background:var(--bg3); }
     .fi2 .nm { flex:1; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .fi2 .sub { color:var(--muted); font-size:11px; font-weight:400; }
+    .qa { border:1px solid var(--line2); background:transparent; color:var(--fg); border-radius:7px; width:28px; height:26px; cursor:pointer; font-size:13px; flex:none; }
+    .qa:hover { background:var(--bg3); border-color:var(--muted); }
   </style><div class="hz"><div class="fb"></div><div class="drop2 scroll" hidden></div></div>`;
   ['keydown', 'keyup', 'keypress'].forEach((ev) => host.addEventListener(ev, (e) => e.stopPropagation()));
   const fb = root.querySelector('.fb');
@@ -61,9 +63,12 @@
           const st = c && app.state.stages.find((x) => x.id === c.stageId);
           return `<div class="fi2" data-open="${esc(w.name)}">
             <div class="nm">${esc(w.name)}<div class="sub">${openKind === 'follow' ? 'tu último mensaje' : 'te escribió'} hace ${HZ.fmtDur(w.wait)}${st ? ' · ' + esc(st.name) : ''}</div></div>
-            <span class="badge ${openKind === 'follow' ? 'pending' : 'failed'}">${openKind === 'follow' ? '↩' : '⏱'} ${HZ.fmtDur(w.wait)}</span></div>`;
+            <span class="badge ${openKind === 'follow' ? 'pending' : 'failed'}">${openKind === 'follow' ? '↩' : '⏱'} ${HZ.fmtDur(w.wait)}</span>
+            <button class="qa" data-qdone="${esc(w.name)}" title="Conversación terminada: deja de aparecer hasta que vuelva a escribir">✓</button>
+            <button class="qa" data-qnl="${esc(w.name)}" title="No es un lead (equipo, proveedor…): no cuenta en métricas">🚫</button></div>`;
         }).join('')
-      : `<div class="empty">${openKind === 'follow' ? 'Nadie pendiente de seguimiento 🎉' : 'Nadie esperando respuesta 🎉'}</div>`);
+      : `<div class="empty">${openKind === 'follow' ? 'Nadie pendiente de seguimiento 🎉' : 'Nadie esperando respuesta 🎉'}</div>`)
+      + (items.length ? '<div class="hd" style="padding-top:8px;border-top:1px solid var(--line);margin-top:4px">✓ = conversación terminada (vuelve si te escribe) · 🚫 = no es un lead (equipo, proveedor…)</div>' : '');
     drop.hidden = false;
   }
   app.renderFilters = render;
@@ -71,6 +76,13 @@
   root.addEventListener('click', async (e) => {
     const f = e.target.closest('[data-f]');
     if (f) { openKind = openKind === f.dataset.f ? null : f.dataset.f; return render(); }
+    const q = e.target.closest('[data-qdone],[data-qnl]');
+    if (q) {
+      e.stopPropagation();
+      if (q.dataset.qdone) await app.setDone(q.dataset.qdone, true);
+      else await app.setNotLead(q.dataset.qnl, 'otro');
+      return render();
+    }
     const o = e.target.closest('[data-open]');
     if (o) { openKind = null; render(); await app.openChat(o.dataset.open); }
   });
@@ -89,7 +101,7 @@
   app.afterBoot.push(() => {
     mount();
     setInterval(mount, 1000);
-    setInterval(render, 15000);
+    setInterval(() => { if (!openKind) render(); }, 5000);
   });
   app.onState = app.onState || [];
   app.onState.push(() => { mount(); render(); });

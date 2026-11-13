@@ -49,6 +49,7 @@
       const waits = HZ.tracker.waiting().slice(0, 30);
       const followMs = (Number(s.followMinutes) || 60) * MIN;
       const follows = HZ.tracker.followups(followMs);
+      const notLeads = Object.entries(app.state.contacts).filter(([, c]) => c.notLead);
       const tile = (label, val, sub = '', warn = false) =>
         `<div class="item" style="margin:0"><div class="m" style="margin:0 0 2px">${label}</div><div style="font-size:20px;font-weight:700;${warn ? 'color:#f87171' : ''}">${val}</div>${sub ? `<div class="m">${sub}</div>` : ''}</div>`;
 
@@ -78,6 +79,7 @@
           <div><div class="m" style="margin:0">Σ Totales</div><div style="font-size:24px;font-weight:800;color:#7aa7ff">${st.conversations}</div>
             <div class="m" style="margin:0;font-size:11px">con mensajes</div></div>
         </div>
+        ${st.excluded ? `<p class="hint" style="margin-top:-2px">🚫 ${st.excluded} contacto${st.excluded === 1 ? '' : 's'} que no ${st.excluded === 1 ? 'es lead' : 'son leads'} no se ${st.excluded === 1 ? 'cuenta' : 'cuentan'}.</p>` : ''}
         <div class="two">
           ${tile('Respondidas', `${st.answered}/${st.withIncoming}`, st.withIncoming ? pct(st.answered / st.withIncoming) : '')}
           ${tile('Tiempo de respuesta', HZ.fmtDur(st.avgRt), `mediana ${HZ.fmtDur(st.medianRt)}`)}
@@ -95,14 +97,21 @@
         <p class="hint" style="margin-top:-4px">Clientes que no te contestan hace más de ${HZ.fmtDur(followMs)}. No incluye Cerrado ni Perdido.</p>
         ${follows.length ? follows.slice(0, 30).map((w) => `<div class="item"><div class="row"><span class="t grow">${esc(w.name)}</span>
             <span class="badge pending">↩ ${HZ.fmtDur(w.wait)}</span>
-            <button class="btn sm ghost" data-stopen="${esc(w.name)}">Abrir</button></div>
+            <button class="btn sm ghost" data-stopen="${esc(w.name)}">Abrir</button>
+            <button class="ib" data-stdone="${esc(w.name)}" title="Conversación terminada">✓</button><button class="ib" data-stnl="${esc(w.name)}" title="No es un lead">🚫</button></div>
             <div class="m">tu último mensaje: ${fDateTime(w.since)}</div></div>`).join('') : '<div class="empty">Nadie pendiente de seguimiento.</div>'}
 
         <h3 class="sec2">Esperando respuesta ahora (${waits.length})</h3>
         ${waits.length ? waits.map((w) => `<div class="item"><div class="row"><span class="t grow">${esc(w.name)}</span>
             <span class="badge ${w.wait >= limit ? 'failed' : 'pending'}">⏱ ${HZ.fmtDur(w.wait)}</span>
-            <button class="btn sm ghost" data-stopen="${esc(w.name)}">Abrir</button></div>
+            <button class="btn sm ghost" data-stopen="${esc(w.name)}">Abrir</button>
+            <button class="ib" data-stdone="${esc(w.name)}" title="Conversación terminada">✓</button><button class="ib" data-stnl="${esc(w.name)}" title="No es un lead">🚫</button></div>
             <div class="m">desde ${fDateTime(w.since)}</div></div>`).join('') : '<div class="empty">Nadie está esperando respuesta 🎉</div>'}
+        <p class="hint">✓ = conversación terminada (vuelve a aparecer si te escribe) · 🚫 = no es un lead (equipo, proveedor…)</p>
+
+        <h3 class="sec2">No son leads (${notLeads.length})</h3>
+        ${notLeads.length ? notLeads.map(([n, c]) => `<div class="item"><div class="row"><span class="t grow">🚫 ${esc(n)}</span><span class="m" style="margin:0">${esc(app.NOTLEAD_KINDS[c.notLead] || 'No es lead')}</span>
+            <button class="btn sm ghost" data-stunl="${esc(n)}">Volver a contar</button></div></div>`).join('') : '<p class="hint">Marcá con 🚫 a tu equipo, proveedores o contactos personales para que no cuenten en las métricas.</p>'}
 
         <h3 class="sec2">Avisos</h3>
         <div class="pref"><span class="grow">Avisar cuando alguien espera respuesta</span><div class="sw ${s.waitAlert ? 'on' : ''}" data-stset="waitAlert"><span class="tr"></span></div></div>
@@ -120,8 +129,11 @@
   const body = app.el.body;
   body.addEventListener('click', (e) => {
     if (app.view !== 'stats') return;
-    const t = e.target.closest('[data-range],[data-st],[data-stopen],[data-stset]');
+    const t = e.target.closest('[data-range],[data-st],[data-stopen],[data-stset],[data-stdone],[data-stnl],[data-stunl]');
     if (!t) return;
+    if (t.dataset.stdone) return app.setDone(t.dataset.stdone, true);
+    if (t.dataset.stnl) return app.setNotLead(t.dataset.stnl, 'otro');
+    if (t.dataset.stunl) return app.setNotLead(t.dataset.stunl, '');
     if (t.dataset.range) { range = t.dataset.range; return app.render(); }
     if (t.dataset.stopen) return app.openChat(t.dataset.stopen);
     if (t.dataset.stset) return app.saveSettings({ [t.dataset.stset]: !app.state.settings[t.dataset.stset] });
@@ -228,6 +240,7 @@
       ['   ↳ iniciadas por vos', st.newByMe],
       ['Conversaciones que ya existían', st.existingConversations],
       ['Conversaciones totales', st.conversations],
+      ['Contactos excluidos (no son leads)', st.excluded],
       ['Conversaciones con mensajes del cliente', st.withIncoming],
       ['Respondidas', st.answered],
       ['Sin responder', st.unanswered],

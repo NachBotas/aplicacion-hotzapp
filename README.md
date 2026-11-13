@@ -8,7 +8,8 @@ Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 - **Varios chats a la vez y botón ⏹ para cancelar**: cada envío aparece abajo, a la derecha de la barra, con cuenta regresiva; tocá la ✕ para cancelarlo (o "Cancelar todo").
 - **Secuencias completas en un solo lugar**: dentro de la secuencia creás cada mensaje (texto, audio, imagen, video, documento o contacto) sin tener que crearlos antes por separado; también podés sumar respuestas ya guardadas.
 - **Temporizadores en las secuencias** ("⏱ Agregar temporizador") y "escribiendo…" configurable en los textos.
-- **Etiquetas en la lista de chats**: la etapa del CRM, las etiquetas de WhatsApp Business y el temporizador de espera, juntos al lado del nombre.
+- **Etiquetas de WhatsApp Business**: se muestran al lado de cada nombre en la lista de chats y se ponen, sacan o crean desde ☰ → Datos del lead (quedan guardadas en WhatsApp y se ven en el celular).
+- **"No es un lead"** (equipo, proveedor, personal): no cuenta en métricas, seguimiento ni esperando. **"Conversación terminada"**: sale de seguimiento/esperando hasta que esa persona vuelva a escribir. Botones ✓ y 🚫 en las listas de Seguimiento y Esperando, y en Datos del lead.
 - **Barra de chips debajo del chat** con filtro (solo favoritos, por tipo), estilo ícono/color, "Mensaje sale directo" y "Secuencia sale directo".
 - **Atajo `;`** en la caja de mensaje (por ej. `;hola` + Enter).
 - Categorías, favoritos, contador de usos y orden con arrastrar y soltar.

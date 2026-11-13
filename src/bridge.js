@@ -99,19 +99,28 @@
       }
       return out;
     },
+    // Etiquetas de WhatsApp Business: todas + las de cada chat
     async labels() {
-      if (!W().labels) return [];
+      if (!W().labels) return { supported: false, all: [], chats: [] };
       let all = [];
-      try { all = await W().labels.getAllLabels(); } catch (_) { return []; }
-      if (!all || !all.length) return [];
-      const byId = Object.fromEntries(all.map((l) => [String(l.id), l]));
+      try { all = await W().labels.getAllLabels(); } catch (_) { return { supported: false, all: [], chats: [] }; }
       const chats = await W().chat.list();
-      return chats
-        .filter((c) => c.labels && c.labels.length)
-        .map((c) => ({
-          name: titleOf(c),
-          labels: c.labels.map((id) => byId[String(id)]).filter(Boolean).map((l) => ({ name: l.name, color: l.hexColor || '#8696a0' }))
-        }));
+      return {
+        supported: true,
+        all: (all || []).map((l) => ({ id: String(l.id), name: l.name, color: l.hexColor || '#8696a0' })),
+        chats: chats.filter((c) => c.labels && c.labels.length).map((c) => ({ name: titleOf(c), id: ser(c.id), labels: c.labels.map(String) }))
+      };
+    },
+    async setLabel(chatId, labelId, add) {
+      await W().labels.addOrRemoveLabels([chatId], [{ labelId: String(labelId), type: add ? 'add' : 'remove' }]);
+      return true;
+    },
+    async newLabel(name, color) {
+      const l = await W().labels.addNewLabel(name, color ? { labelColor: color } : undefined);
+      return l ? { id: String(l.id), name: l.name, color: l.hexColor || color || '#8696a0' } : null;
+    },
+    async labelPalette() {
+      try { return await W().labels.getLabelColorPalette(); } catch (_) { return []; }
     }
   };
 
