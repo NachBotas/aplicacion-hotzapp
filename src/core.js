@@ -1,0 +1,351 @@
+// Núcleo de HotZapp dentro de WhatsApp Web: estado, panel, riel y motor de envío.
+(function () {
+  const HZ = globalThis.HZ;
+  const wa = HZ.wa;
+  const I = HZ.icon;
+  if (window.top !== window || document.getElementById('hotzapp-root')) { HZ.skip = true; return; }
+
+  const app = (HZ.app = {
+    state: null,
+    view: 'menu',
+    open: false,
+    views: {},
+    busyIds: new Set()
+  });
+
+  // ---------- montaje ----------
+  const host = document.createElement('div');
+  host.id = 'hotzapp-root';
+  document.documentElement.appendChild(host);
+  const root = host.attachShadow({ mode: 'open' });
+  root.innerHTML = `
+    <style>${HZ.PANEL_CSS}</style>
+    <div class="hz">
+      <div class="rail"></div>
+      <aside class="panel" hidden>
+        <div class="ph"></div>
+        <div class="pb scroll"></div>
+        <div class="status"></div>
+      </aside>
+      <div class="ov" hidden></div>
+      <div class="pop scroll" hidden></div>
+      <div class="fpop" hidden></div>
+    </div>`;
+  ['keydown', 'keypress', 'keyup', 'paste', 'input'].forEach((ev) => host.addEventListener(ev, (e) => e.stopPropagation()));
+
+  app.root = root;
+  app.$ = (s) => root.querySelector(s);
+  app.el = { rail: app.$('.rail'), panel: app.$('.panel'), head: app.$('.ph'), body: app.$('.pb'), status: app.$('.status'), ov: app.$('.ov'), pop: app.$('.pop'), fpop: app.$('.fpop') };
+
+  // Empuja la interfaz de WhatsApp para que el panel no tape el chat.
+  const pushStyle = document.createElement('style');
+  document.documentElement.appendChild(pushStyle);
+  app.applyPush = () => {
+    const w = (app.state && app.state.settings.panelWidth) || 340;
+    app.el.panel.style.setProperty('--w', w + 'px');
+    pushStyle.textContent = app.open
+      ? `#app { width: calc(100vw - ${w}px) !important; max-width: calc(100vw - ${w}px) !important; }`
+      : '';
+  };
+
+  app.show = (view) => {
+    app.view = view || app.view;
+    app.open = true;
+    app.el.panel.hidden = false;
+    app.applyPush();
+    app.render();
+    renderRail();
+  };
+  app.close = () => {
+    app.open = false;
+    app.el.panel.hidden = true;
+    app.applyPush();
+    renderRail();
+  };
+  app.toggle = () => (app.open ? app.close() : app.show());
+
+  // ---------- helpers ----------
+  app.save = async (patch) => {
+    Object.assign(app.state, patch);
+    await HZ.set(patch);
+  };
+  app.saveSettings = (patch) => app.save({ settings: { ...app.state.settings, ...patch } });
+
+  app.chat = () => wa.chatTitle();
+  app.ctx = () => {
+    const chatName = wa.chatTitle();
+    const c = (chatName && app.state.contacts[chatName]) || {};
+    return { chatName, phone: c.phone || '', myName: app.state.settings.myName };
+  };
+
+  let statusTimer;
+  app.status = (msg, kind = '', progress = null) => {
+    clearTimeout(statusTimer);
+    const s = app.el.status;
+    s.className = 'status ' + kind;
+    s.innerHTML = msg
+      ? `<span>${HZ.escape(msg)}</span>` + (progress != null ? `<div class="bar"><i style="width:${Math.round(progress * 100)}%"></i></div>` : '')
+      : '';
+    if (kind === 'ok' || kind === 'err') statusTimer = setTimeout(() => (s.innerHTML = ''), kind === 'err' ? 9000 : 4000);
+    if (!app.open && (kind === 'err' || kind === 'ok')) app.toast(msg);
+  };
+
+  app.toast = (msg, ms = 3000) => {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    root.querySelector('.hz').appendChild(t);
+    setTimeout(() => t.remove(), ms);
+  };
+
+  app.typeIcon = (type, size = 16) => {
+    const T = HZ.TYPES[type] || HZ.TYPES.text;
+    return `<span class="ticon" style="background:${T.color}22;color:${T.color}">${I(T.icon, size)}</span>`;
+  };
+
+  app.preview = (r) => {
+    if (r.type === 'text') return r.text || '';
+    if (r.type === 'contact') return `${r.contactName || ''} · ${r.contactPhone || ''}`;
+    if (r.type === 'sequence') {
+      return (r.items || []).map((it, i) => {
+        const c = app.state.replies.find((x) => x.id === it.replyId);
+        return (i && it.delay ? `${it.delay} s → ` : '') + (c ? c.name : '(borrada)');
+      }).join(' → ');
+    }
+    return r.caption || HZ.TYPES[r.type].label;
+  };
+
+  app.seqDuration = (r) => (r.items || []).reduce((a, it) => a + (Number(it.delay) || 0), 0);
+
+  // ---------- etapas ----------
+  app.setStage = async (name, stageId) => {
+    if (!name) return;
+    const contacts = { ...app.state.contacts };
+    if (stageId) contacts[name] = { ...(contacts[name] || {}), stageId, updatedAt: Date.now() };
+    else if (contacts[name]) contacts[name] = { ...contacts[name], stageId: '', updatedAt: Date.now() };
+    await app.save({ contacts });
+  };
+
+  // ---------- motor de envío ----------
+  const queue = [];
+  let busy = false;
+  app.enqueue = (job) =>
+    new Promise((resolve, reject) => {
+      queue.push({ job, resolve, reject });
+      pump();
+    });
+  async function pump() {
+    if (busy || !queue.length) return;
+    busy = true;
+    const { job, resolve, reject } = queue.shift();
+    try { resolve(await job()); } catch (e) { reject(e); } finally { busy = false; pump(); }
+  }
+
+  async function runOne(r, ctx, direct) {
+    const fill = (t) => HZ.fillVars(t, ctx);
+    switch (r.type) {
+      case 'text':
+        if (direct) await wa.sendText(fill(r.text), { typing: r.typing });
+        else await wa.insertText(fill(r.text));
+        break;
+      case 'audio': {
+        const m = await HZ.getMedia(r.mediaId);
+        if (!m) throw new Error(`Falta el audio de “${r.name}”.`);
+        if (r.asVoice !== false) {
+          await wa.sendVoice(m.dataUrl, (t, d) => app.status(`🎤 Grabando “${r.name}”… ${Math.round(t)}s / ${Math.round(d)}s`, '', t / d), { viewOnce: r.viewOnce });
+        } else {
+          await wa.sendFile(await HZ.dataUrlToFile(m.dataUrl, m.name || 'audio.mp3', m.mime), { viewOnce: r.viewOnce, send: direct });
+        }
+        break;
+      }
+      case 'image':
+      case 'video':
+      case 'document': {
+        const m = await HZ.getMedia(r.mediaId);
+        if (!m) throw new Error(`Falta el archivo de “${r.name}”.`);
+        const file = await HZ.dataUrlToFile(m.dataUrl, m.name, m.mime);
+        await wa.sendFile(file, { caption: fill(r.caption || ''), viewOnce: r.type !== 'document' && r.viewOnce, send: direct });
+        break;
+      }
+      case 'contact':
+        await wa.sendContact(r.contactName, r.contactPhone);
+        break;
+    }
+  }
+
+  // Envía una respuesta (o secuencia) al chat abierto.
+  app.send = async (id, opts = {}) => {
+    const r = app.state.replies.find((x) => x.id === id);
+    if (!r) return false;
+    if (!wa.composeBox()) { app.lastError = 'Abrí un chat de WhatsApp primero.'; app.status(app.lastError, 'err'); return false; }
+    const direct = opts.direct ?? app.state.settings.directSend;
+    app.busyIds.add(id);
+    app.refreshBusy && app.refreshBusy();
+    try {
+      await app.enqueue(async () => {
+        const ctx = app.ctx();
+        if (r.type === 'sequence') {
+          const items = r.items || [];
+          for (let i = 0; i < items.length; i++) {
+            const child = app.state.replies.find((x) => x.id === items[i].replyId);
+            if (!child || child.type === 'sequence') continue;
+            const d = Number(items[i].delay) || 0;
+            if (i > 0 && d > 0) {
+              app.status(`⏳ ${r.name}: esperando ${d}s (${i + 1}/${items.length})…`);
+              await wa.sleep(d * 1000);
+            }
+            app.status(`➤ ${r.name}: enviando “${child.name}” (${i + 1}/${items.length})…`);
+            await runOne(child, ctx, true);
+            await bumpUses(child.id);
+          }
+          if (r.afterStage && ctx.chatName) await app.setStage(ctx.chatName, r.afterStage);
+        } else {
+          app.status(`➤ Enviando “${r.name}”…`);
+          await runOne(r, ctx, direct);
+        }
+        await bumpUses(r.id);
+      });
+      app.status(direct || r.type === 'sequence' ? `✅ “${r.name}” enviada` : `✍️ “${r.name}” lista para enviar`, 'ok');
+      return true;
+    } catch (e) {
+      app.lastError = e.message;
+      app.status('⚠️ ' + e.message, 'err');
+      return false;
+    } finally {
+      app.busyIds.delete(id);
+      app.refreshBusy && app.refreshBusy();
+    }
+  };
+
+  async function bumpUses(id) {
+    const replies = app.state.replies.map((x) => (x.id === id ? { ...x, uses: (x.uses || 0) + 1, lastUsed: Date.now() } : x));
+    await app.save({ replies });
+  }
+
+  // ---------- riel izquierdo ----------
+  app.counts = () => {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+    const chat = wa.chatTitle();
+    return {
+      tasks: app.state.tasks.filter((t) => !t.done && t.due && t.due < end).length,
+      notes: chat ? (app.state.notes[chat] || []).length : 0,
+      agenda: app.state.scheduled.filter((s) => s.status === 'pending').length
+    };
+  };
+
+  function renderRail() {
+    const r = app.el.rail;
+    if (!app.state) return;
+    const collapsed = app.state.settings.railCollapsed;
+    const c = app.counts();
+    const b = (view, icon, title, n, orange) =>
+      `<button class="rb ${app.open && app.view === view ? 'on' : ''}" data-rail="${view}" title="${title}">${I(icon, 17)}${n ? `<span class="cnt ${orange ? 'orange' : ''}">${n}</span>` : ''}</button>`;
+    r.innerHTML = collapsed
+      ? `<button class="rb tog" data-rail="__expand" title="Mostrar HotZapp">${I('chevronRight', 14)}</button>`
+      : `<button class="rb tog" data-rail="__collapse" title="Ocultar">${I('chevronLeft', 14)}</button>
+         ${b('menu', 'menu', 'Menú HotZapp')}
+         ${b('replies', 'bolt', 'Respuestas rápidas')}
+         ${b('tasks', 'listCheck', 'Pendientes', c.tasks, true)}
+         ${b('notes', 'notes', 'Notas del chat', c.notes)}
+         ${b('agenda', 'calendar', 'Agenda', c.agenda)}
+         ${b('crm', 'kanban', 'CRM')}`;
+  }
+  app.renderRail = renderRail;
+
+  app.el.rail.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-rail]');
+    if (!t) return;
+    const v = t.dataset.rail;
+    if (v === '__collapse') return app.saveSettings({ railCollapsed: true }).then(renderRail);
+    if (v === '__expand') return app.saveSettings({ railCollapsed: false }).then(renderRail);
+    if (v === 'crm') return app.views.crm.open();
+    if (app.open && app.view === v) app.close();
+    else app.show(v);
+  });
+
+  function placeRail() {
+    const main = document.querySelector('#main') || document.querySelector('#app');
+    const r = main ? main.getBoundingClientRect() : { left: 0, top: 0, height: window.innerHeight };
+    const rail = app.el.rail;
+    rail.hidden = !document.querySelector('#side');
+    rail.style.left = Math.max(0, r.left + 6) + 'px';
+    rail.style.top = Math.max(70, r.top + r.height / 2 - rail.offsetHeight / 2) + 'px';
+  }
+
+  // ---------- render ----------
+  app.render = () => {
+    if (!app.state || !app.open) return;
+    const v = app.views[app.view] || app.views.menu;
+    v.render(app.el.head, app.el.body);
+  };
+
+  app.header = (title, extra = '') => `
+    <h2>${title}</h2>${extra}
+    ${app.view !== 'menu' ? `<button class="ib" data-go="menu" title="Menú">${I('menu', 18)}</button>` : ''}
+    <button class="ib" data-go="__close" title="Cerrar">${I('x', 18)}</button>`;
+
+  app.el.head.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-go]');
+    if (!t) return;
+    if (t.dataset.go === '__close') app.close();
+    else app.show(t.dataset.go);
+  });
+
+  // ---------- modal genérico ----------
+  app.modal = (html, { wide = false, onClose } = {}) => {
+    const ov = app.el.ov;
+    ov.innerHTML = `<div class="modal ${wide ? 'wide' : ''}">${html}</div>`;
+    ov.hidden = false;
+    app._onModalClose = onClose;
+    return ov.firstElementChild;
+  };
+  app.closeModal = () => {
+    app.el.ov.hidden = true;
+    app.el.ov.innerHTML = '';
+    const cb = app._onModalClose;
+    app._onModalClose = null;
+    cb && cb();
+  };
+  app.el.ov.addEventListener('mousedown', (e) => { if (e.target === app.el.ov) app.closeModal(); });
+  host.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !app.el.ov.hidden) app.closeModal(); });
+
+  // ---------- arranque ----------
+  app.boot = async () => {
+    app.state = await HZ.getAll();
+    let saved = '0';
+    try { saved = localStorage.getItem('hotzapp-open') ?? '0'; } catch (_) {}
+    renderRail();
+    if (saved === '1') app.show(localStorage.getItem('hotzapp-view') || 'menu');
+    app.afterBoot && app.afterBoot.forEach((f) => f());
+
+    HZ.onChange(async () => {
+      app.state = await HZ.getAll();
+      app.applyPush();
+      renderRail();
+      // no re-dibujar si el usuario está escribiendo en el panel
+      const a = root.activeElement;
+      if (!(a && app.el.body.contains(a) && a.matches('input,textarea,select'))) app.render();
+      app.onState && app.onState.forEach((f) => f());
+    });
+
+    let lastChat = wa.chatTitle();
+    setInterval(() => {
+      placeRail();
+      const c = wa.chatTitle();
+      if (c !== lastChat) {
+        lastChat = c;
+        renderRail();
+        if (app.open && ['lead', 'notes', 'menu'].includes(app.view)) app.render();
+      }
+      try {
+        localStorage.setItem('hotzapp-open', app.open ? '1' : '0');
+        localStorage.setItem('hotzapp-view', app.view);
+      } catch (_) {}
+    }, 600);
+  };
+
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg && msg.type === 'toggle') app.toggle();
+  });
+})();

@@ -1,45 +1,52 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HotZapp · Configuración</title>
-  <link rel="stylesheet" href="options.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HotZapp</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #111313; color: #e9edef; font: 15px/1.6 "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 800; }
+  .logo { width: 40px; height: 40px; border-radius: 11px; background: #1d6bff; display: grid; place-items: center; }
+  .sub { color: #8d9599; margin: 6px 0 28px; }
+  .btn { display: inline-block; background: #1d6bff; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 700; }
+  .card { background: #1a1c1c; border: 1px solid #2f3232; border-radius: 14px; padding: 18px 22px; margin: 18px 0; }
+  .card h2 { margin: 0 0 8px; font-size: 17px; }
+  ol, ul { margin: 0; padding-left: 20px; }
+  li { margin: 6px 0; }
+  code, .k { background: #2a2c2c; border: 1px solid #3b3f3f; border-radius: 5px; padding: 0 6px; font-size: 13px; }
+  .muted { color: #8d9599; font-size: 13px; }
+</style>
 </head>
 <body>
-  <aside class="nav">
-    <div class="brand"><span class="logo">⚡</span><b>HotZapp</b></div>
-    <a href="#replies" data-sec="replies">⚡ Respuestas rápidas</a>
-    <a href="#funnel" data-sec="funnel">📊 Embudo</a>
-    <a href="#scheduled" data-sec="scheduled">⏰ Programados</a>
-    <a href="#settings" data-sec="settings">⚙️ Ajustes</a>
-    <div class="foot">Abrí <a href="https://web.whatsapp.com" target="_blank">WhatsApp Web</a> para usar el panel.</div>
-  </aside>
-  <main id="view"></main>
+<div class="wrap">
+  <div class="brand"><span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>HotZapp</div>
+  <p class="sub">Respuestas rápidas, CRM, pendientes y agenda dentro de WhatsApp Web.</p>
+  <a class="btn" href="https://web.whatsapp.com" target="_blank">Abrir WhatsApp Web →</a>
 
-  <dialog id="editor">
-    <form method="dialog" class="ed">
-      <h2 id="ed-title">Nueva respuesta</h2>
-      <div class="grid2">
-        <label>Nombre<input id="ed-name" required placeholder="Ej: Precios"></label>
-        <label>Atajo<input id="ed-short" placeholder="/precios"></label>
-      </div>
-      <p class="help">Variables: <code>{nombre}</code> <code>{nombre_completo}</code> <code>{saludo}</code> <code>{fecha}</code> <code>{hora}</code></p>
-      <div id="ed-steps"></div>
-      <div class="add-row">
-        <span>Agregar paso:</span>
-        <button type="button" class="btn ghost" data-add="text">📝 Texto</button>
-        <button type="button" class="btn ghost" data-add="image">🖼️ Imagen</button>
-        <button type="button" class="btn ghost" data-add="audio">🎤 Audio</button>
-      </div>
-      <div class="ed-actions">
-        <button type="button" class="btn ghost" id="ed-cancel">Cancelar</button>
-        <button type="button" class="btn" id="ed-save">Guardar</button>
-      </div>
-    </form>
-  </dialog>
-
-  <script src="../src/storage.js"></script>
-  <script src="options.js"></script>
+  <div class="card">
+    <h2>Cómo se usa</h2>
+    <ol>
+      <li>Abrí WhatsApp Web y entrá a un chat.</li>
+      <li>A la izquierda del chat vas a ver una barrita con íconos: tocá <b>☰</b> para el menú o <b>⚡</b> para las respuestas rápidas.</li>
+      <li>Creá una respuesta con <b>+ Nueva</b>: texto, audio, imagen, video, documento, contacto o una secuencia.</li>
+      <li>Mandala tocando la tarjeta, el chip de la barra de abajo del chat, o escribiendo <span class="k">;</span> + atajo en la caja de mensaje.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>Lo que incluye</h2>
+    <ul>
+      <li><b>Audios como recién grabados</b>: llegan como nota de voz y el otro ve “grabando audio…”.</li>
+      <li><b>Secuencias</b>: varias respuestas una tras otra, con espera, y opción de mover el chat a una etapa del CRM.</li>
+      <li><b>CRM</b> en tablero con etapas, <b>Datos del lead</b> y <b>Notas</b> por conversación.</li>
+      <li><b>Pendientes</b> con aviso y <b>Agenda</b> de mensajes programados.</li>
+      <li>Variables: primer nombre, nombre completo, saludo, tu nombre, teléfono, fecha y hora.</li>
+    </ul>
+  </div>
+  <p class="muted">Copia de seguridad, preferencias y “Tu nombre”: en WhatsApp Web → menú HotZapp → Herramientas.<br>
+  Uso responsable: no la uses para spam ni envíos masivos. HotZapp no está afiliada a WhatsApp ni a Meta.</p>
+</div>
 </body>
 </html>

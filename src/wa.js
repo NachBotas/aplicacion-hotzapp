@@ -163,15 +163,41 @@
     return box;
   }
 
-  async function sendText(text) {
+  // opts: { typing: segundos de "escribiendo…", send: false = sólo dejarlo escrito }
+  async function sendText(text, opts = {}) {
     const box = requireChat();
     if (!String(text).trim()) return;
+    const typing = Number(opts.typing) || 0;
+    if (typing > 0) {
+      // Escribimos de a poco para que el otro vea "escribiendo…", y al final
+      // pegamos el texto completo (así se respetan saltos de línea y emojis).
+      clearEditable(box);
+      const plain = String(text).replace(/\s+/g, ' ');
+      const t0 = Date.now();
+      let i = 0;
+      while (Date.now() - t0 < typing * 1000) {
+        const target = Math.min(plain.length, Math.ceil(((Date.now() - t0) / (typing * 1000)) * plain.length));
+        if (target > i) {
+          box.focus();
+          document.execCommand('insertText', false, plain.slice(i, target));
+          i = target;
+        }
+        await sleep(120);
+      }
+    }
     await typeInto(box, text);
+    if (opts.send === false) return;
     await sleep(250);
     const btn = await waitFor(() => findButton(footer(), ICON.send, LABEL.send), 3000);
     if (btn) realClick(btn);
     else pressKey(box, 'Enter');
     await waitFor(() => !norm(composeBox()?.textContent), 4000);
+  }
+
+  // Deja el texto escrito en la caja sin enviarlo.
+  async function insertText(text) {
+    const box = requireChat();
+    await typeInto(box, text);
   }
 
   // Busca el botón de "enviar" del editor de multimedia (fuera del footer del chat).
@@ -188,7 +214,12 @@
     return all[all.length - 1] || null;
   }
 
-  async function sendImage(file, caption) {
+  const VIEW_ONCE_ICON = /view.?once|once/i;
+  const VIEW_ONCE_LABEL = /(una sola vez|ver una vez|view once)/i;
+
+  // Imágenes, videos, documentos y audios como archivo.
+  // opts: { caption, viewOnce, send: false = dejar la vista previa abierta }
+  async function sendFile(file, opts = {}) {
     const box = requireChat();
     box.focus();
     const dt = new DataTransfer();
@@ -204,20 +235,77 @@
         main.dispatchEvent(new DragEvent(type, { dataTransfer: dt2, bubbles: true, cancelable: true }));
         await sleep(120);
       }
-      btn = await waitFor(mediaSendButton, 6000);
+      btn = await waitFor(mediaSendButton, 8000);
     }
-    if (!btn) throw new Error('No se abrió la vista previa de la imagen.');
-    if (caption && caption.trim()) {
+    if (!btn) throw new Error('No se abrió la vista previa del archivo.');
+    if (opts.caption && opts.caption.trim()) {
       const cb = captionBox();
       if (cb) {
         cb.focus();
-        pasteText(cb, caption);
+        pasteText(cb, opts.caption);
         await sleep(250);
       }
     }
+    if (opts.viewOnce) {
+      const f = footer();
+      const vo = findButton(document.body, VIEW_ONCE_ICON, VIEW_ONCE_LABEL, (el) => (f && f.contains(el)) || el.closest('#side'));
+      if (!vo) {
+        pressKey(document.activeElement || document.body, 'Escape');
+        throw new Error('No encontré el botón "ver una sola vez" de WhatsApp (no se envió).');
+      }
+      realClick(vo);
+      await sleep(300);
+    }
+    if (opts.send === false) return;
     await sleep(300);
     realClick(mediaSendButton() || btn);
-    await waitFor(() => !mediaSendButton(), 8000);
+    await waitFor(() => !mediaSendButton(), 15000);
+  }
+
+  // ---------- tarjeta de contacto ----------
+  // Usa el menú Adjuntar → Contacto (sólo funciona con contactos agendados).
+  // Si no se puede, manda los datos como texto.
+  async function sendContact(name, phone) {
+    requireChat();
+    const f = footer();
+    const attach = findButton(f || document, /(plus|clip|attach)/i, /(adjuntar|attach)/i);
+    let ok = false;
+    if (attach) {
+      realClick(attach);
+      const item = await waitFor(() =>
+        [...document.querySelectorAll('li,[role="menuitem"],[role="button"],button,div[tabindex]')].find(
+          (el) => visible(el) && /^(contacto|contact)$/i.test((el.textContent || '').trim())
+        ), 3000);
+      if (item) {
+        realClick(item);
+        const dlg = await waitFor(() => [...document.querySelectorAll('[role="dialog"],[data-animate-modal-popup]')].find(visible), 4000);
+        const input = dlg && (dlg.querySelector('div[contenteditable="true"]') || dlg.querySelector('input'));
+        if (input) {
+          const digitsOnly = digits(phone);
+          await typeInto(input, digitsOnly.slice(-8) || name);
+          const row = await waitFor(() => {
+            const rows = [...dlg.querySelectorAll('[role="listitem"],[role="row"],[role="checkbox"]')].filter(visible);
+            return rows.find((r) => digits(r.textContent).endsWith(digitsOnly.slice(-8)) || norm(r.textContent).includes(norm(name))) || null;
+          }, 4000);
+          if (row) {
+            realClick(row);
+            await sleep(400);
+            const s1 = await waitFor(() => findButton(dlg, ICON.send, LABEL.send), 3000);
+            if (s1) {
+              realClick(s1);
+              await sleep(800);
+              const s2 = await waitFor(() => findButton(document.body, ICON.send, LABEL.send, (el) => (f && f.contains(el)) || el.closest('#side')), 3000);
+              if (s2) { realClick(s2); ok = true; await sleep(600); }
+            }
+          }
+        }
+      }
+      if (!ok) {
+        for (let i = 0; i < 3; i++) { pressKey(document.activeElement || document.body, 'Escape'); await sleep(200); }
+      }
+    }
+    if (!ok) await sendText(`👤 *${name}*\n📞 ${phone}\nhttps://wa.me/${digits(phone)}`);
+    return ok;
   }
 
   // ---------- audio como nota de voz ----------
@@ -245,7 +333,7 @@
     });
   }
 
-  async function sendVoice(dataUrl, onProgress) {
+  async function sendVoice(dataUrl, onProgress, opts = {}) {
     const box = requireChat();
     clearEditable(box); // el botón de micrófono sólo aparece con la caja vacía
     await sleep(200);
@@ -276,6 +364,16 @@
       clearInterval(tick);
     }
     await sleep(300);
+    if (opts.viewOnce) {
+      const vo = findButton(footer(), VIEW_ONCE_ICON, VIEW_ONCE_LABEL);
+      if (!vo) {
+        const del = findButton(footer(), /(delete|trash|bin)/i, /(eliminar|borrar|delete|cancel)/i);
+        if (del) realClick(del);
+        throw new Error('No encontré "ver una sola vez" para la nota de voz (no se envió).');
+      }
+      realClick(vo);
+      await sleep(300);
+    }
     const send = await waitFor(() => findButton(footer(), ICON.send, LABEL.send), 4000);
     if (!send) throw new Error('No encontré el botón para enviar la nota de voz.');
     realClick(send);
@@ -320,7 +418,7 @@
 
   HZ.wa = {
     sleep, waitFor, visible, norm, sameChat,
-    composeBox, searchBox, footer, chatTitle,
-    sendText, sendImage, sendVoice, openChat, realClick
+    composeBox, searchBox, footer, chatTitle, digits,
+    sendText, insertText, sendFile, sendVoice, sendContact, openChat, realClick
   };
 })();
