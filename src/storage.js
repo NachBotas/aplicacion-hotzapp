@@ -54,7 +54,10 @@
       sendMode: 'fast', // 'fast' = WA-JS (rápido, varios chats a la vez) | 'dom' = compatibilidad
       listShowStage: true, // etiqueta del CRM al lado del nombre
       listShowLabels: true, // etiquetas de WhatsApp Business
-      listShowTimer: true // temporizador de espera
+      listShowTimer: true, // temporizador de espera
+      listShowFollow: true, // etiqueta "↩ sin respuesta" para seguimiento
+      followMinutes: 60, // a partir de cuándo un chat necesita seguimiento
+      tutorialSeen: false
     }
   };
 

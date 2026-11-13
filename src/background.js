@@ -19,7 +19,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'openOptions') {
     chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html') + (msg.hash || '') });
   } else if (msg.type === 'notify') {
-    chrome.notifications.create({ type: 'basic', iconUrl: chrome.runtime.getURL('icons/icon128.png'), title: msg.title || 'HotZapp', message: msg.message || '' });
+    chrome.notifications.create({ type: 'basic', iconUrl: chrome.runtime.getURL('icons/icon128.png'), title: msg.title || 'Whazaa', message: msg.message || '' });
   }
 });
 

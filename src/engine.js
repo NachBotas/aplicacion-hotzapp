@@ -1,4 +1,4 @@
-// Motor de envíos de HotZapp.
+// Motor de envíos de Whazaa.
 //
 // Modo rápido (por defecto): usa WA-JS a través de bridge.js. Cada envío queda
 // atado al chat donde lo disparaste, así podés pasar a otro chat mientras sale;

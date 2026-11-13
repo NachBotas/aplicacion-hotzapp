@@ -1,4 +1,4 @@
-# ⚡ HotZapp – Respuestas rápidas para WhatsApp Web
+# ⚡ Whazaa – Respuestas rápidas, CRM y estadísticas para WhatsApp Web
 
 Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 
@@ -13,8 +13,10 @@ Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 - Categorías, favoritos, contador de usos y orden con arrastrar y soltar.
 - Variables: Primer nombre, Nombre completo, Saludo, Tu nombre, Teléfono, Fecha de hoy y Hora actual.
 - Opciones: "Ver una sola vez" (imagen, video, audio) y "Simular escribiendo…" (texto).
-- **Menú HotZapp**: Pendientes (con aviso), Agenda (mensajes programados), CRM (tablero Kanban), Datos del lead, Notas, Herramientas y Copia de seguridad.
-- **Estadísticas** de hoy, 7 días y 30 días: conversaciones, nuevas, respondidas / sin responder, mensajes, tiempo de respuesta promedio y mediana, % respondidas en menos de 5 min y 1 h, gráfico por día.
+- **Menú Whazaa**: Pendientes (con aviso), Agenda (mensajes programados), CRM (tablero Kanban), Datos del lead, Notas, Herramientas y Copia de seguridad.
+- **Estadísticas** de hoy, 7 días y 30 días: **conversaciones nuevas** (empezaron en el período, separadas en iniciadas por el cliente o por vos), **las que ya existían** y **totales** — leyendo el historial real de WhatsApp —, respondidas / sin responder, mensajes, tiempo de respuesta promedio y mediana, % respondidas en menos de 5 min y 1 h, gráfico por día.
+- **Filtro "↩ Seguimiento"** arriba de la lista de chats: clientes que no te contestan hace más de 1 hora (configurable), con su etiqueta "↩ 2 h" en cada chat. Y **"⏱ Esperando"** para los que esperan tu respuesta.
+- **Tutorial** dentro de la extensión (☰ → Tutorial) con todos los comandos y cómo usarlos.
 - **Aviso cuando un cliente espera** más de N minutos: notificación, etiqueta roja "⏱ 25 min" en la lista de chats y lista de quién está esperando.
 - **Exportar estadísticas a Excel (.xlsx)** con hojas Resumen, Por día y Conversaciones, la cuenta de WhatsApp, quién lo exportó y un **código de verificación**; con *Verificar un archivo recibido* se detecta si alguien cambió los números.
 - **Copia de seguridad en .zip** con todo: configuración, respuestas, CRM, notas, agenda y los audios, imágenes, videos y documentos en carpetas. Se carga en otra computadora con *Reemplazar todo* o *Combinar*.
@@ -25,7 +27,7 @@ Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 2. En Chrome abrí `chrome://extensions`.
 3. Activá **Modo de desarrollador** (arriba a la derecha).
 4. Tocá **Cargar descomprimida** y elegí la carpeta del proyecto (la que tiene `manifest.json`).
-5. Abrí https://web.whatsapp.com: vas a ver el panel **⚡ HotZapp** a la derecha.
+5. Abrí https://web.whatsapp.com: vas a ver el panel **⚡ Whazaa** a la derecha.
 
 En WhatsApp Web vas a ver una barrita a la izquierda del chat (☰ menú, ⚡ respuestas, pendientes, notas, agenda y CRM) y la barra de chips debajo de la caja de mensaje.
 
@@ -51,15 +53,15 @@ En WhatsApp Web vas a ver una barrita a la izquierda del chat (☰ menú, ⚡ re
 - Si un audio no arranca, hacé un clic cualquiera en WhatsApp Web y reintentá (Chrome a veces bloquea el audio hasta que interactuás con la página).
 - WhatsApp cambia su página seguido. Si algo deja de andar después de una actualización, los selectores están todos en `src/wa.js`.
 - **"Ver una sola vez"** y la **tarjeta de contacto** dependen de botones de WhatsApp que cambian seguido: si no se encuentran, la imagen/audio no se envía (para no mandarlo permanente por error) y el contacto se manda como texto con el número y un link wa.me.
-- **Estadísticas**: WhatsApp no guarda tiempos de respuesta en cuentas normales, así que HotZapp los mide desde que está instalado, mientras WhatsApp Web está abierto (lista de chats + mensajes de cada chat que se abre). Lo que se responde desde el celular con la compu cerrada se registra la próxima vez que se abre ese chat en WhatsApp Web. Los grupos no cuentan (se pueden incluir).
-- **Tus archivos** se copian dentro de la extensión (aunque borres el original, la respuesta sigue andando), pero se pierden si desinstalás HotZapp o borrás los datos de Chrome: hacé backups seguido y guardá los originales juntos en una carpeta.
-- **Uso responsable**: no la uses para spam ni envíos masivos. WhatsApp puede restringir números con muchos reportes. HotZapp no está afiliada a WhatsApp ni a Meta.
+- **Estadísticas**: WhatsApp no guarda tiempos de respuesta en cuentas normales, así que Whazaa los mide desde que está instalado, mientras WhatsApp Web está abierto (lista de chats + mensajes de cada chat que se abre). Lo que se responde desde el celular con la compu cerrada se registra la próxima vez que se abre ese chat en WhatsApp Web. Los grupos no cuentan (se pueden incluir).
+- **Tus archivos** se copian dentro de la extensión (aunque borres el original, la respuesta sigue andando), pero se pierden si desinstalás Whazaa o borrás los datos de Chrome: hacé backups seguido y guardá los originales juntos en una carpeta.
+- **Uso responsable**: no la uses para spam ni envíos masivos. WhatsApp puede restringir números con muchos reportes. Whazaa no está afiliada a WhatsApp ni a Meta.
 
 ## Motor de envío
 
-HotZapp usa [WA-JS](https://github.com/wppconnect-team/wa-js) (WPPConnect, licencia Apache 2.0, incluida en `lib/`) para mandar mensajes directamente desde WhatsApp Web: es lo que permite enviar audios como nota de voz al instante, mandar a un chat aunque no esté abierto y mostrar "escribiendo…" / "grabando audio…". Está configurado para **no** enviar analíticas ni usar servidores externos (`src/wpp-config.js`).
+Whazaa usa [WA-JS](https://github.com/wppconnect-team/wa-js) (WPPConnect, licencia Apache 2.0, incluida en `lib/`) para mandar mensajes directamente desde WhatsApp Web: es lo que permite enviar audios como nota de voz al instante, mandar a un chat aunque no esté abierto y mostrar "escribiendo…" / "grabando audio…". Está configurado para **no** enviar analíticas ni usar servidores externos (`src/wpp-config.js`).
 
-Si WA-JS no carga (por ejemplo, justo después de una actualización de WhatsApp), HotZapp pasa solo al **modo compatibilidad** (hace clic en la página, un envío a la vez y en el chat abierto). El estado se ve en Menú → Herramientas → Envío de mensajes.
+Si WA-JS no carga (por ejemplo, justo después de una actualización de WhatsApp), Whazaa pasa solo al **modo compatibilidad** (hace clic en la página, un envío a la vez y en el chat abierto). El estado se ve en Menú → Herramientas → Envío de mensajes.
 
 ## Estructura
 
@@ -80,7 +82,9 @@ src/editor.js         Editor de respuestas (7 tipos)
 src/sections.js       Menú, Respuestas, Pendientes, Agenda, Datos del lead, Notas, Herramientas y CRM
 src/bar.js            Barra de chips debajo del chat y atajo ";"
 src/backup.js         Copia de seguridad en .zip (exportar / importar)
-src/tracker.js        Registro de conversaciones y avisos de espera
+src/tracker.js        Registro de conversaciones (historial real), seguimiento y avisos de espera
+src/followbar.js      Filtros "Seguimiento" y "Esperando" arriba de la lista de chats
+src/tutorial.js       Tutorial
 src/stats.js          Estadísticas, exportación a Excel y verificación
 src/content.js        Arranque: agenda, avisos de pendientes y puntos de color del CRM
 src/panel-style.js    Estilos (tema oscuro)

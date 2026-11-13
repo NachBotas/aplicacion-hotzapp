@@ -112,10 +112,10 @@
         <button type="button" class="big ${recHere ? 'rec' : ''}" data-x="rec"${A}>${I(recHere ? 'stop' : 'mic', 20)}${recHere ? 'Detener grabación' : 'Grabar ahora'}${recHere ? '<small>● grabando…</small>' : ''}</button>
         <button type="button" class="big" data-x="file"${A}>${I('file', 20)}Elegir archivo<small>${ACCEPT.audio.hint}</small></button>
       </div><input type="file" hidden accept="${ACCEPT.audio.accept}" data-file${A}>
-      ${A ? '' : '<div class="help">Se guarda una copia dentro de HotZapp y entra en tu <b>Copia de seguridad</b>.</div>'}`;
+      ${A ? '' : '<div class="help">Se guarda una copia dentro de Whazaa y entra en tu <b>Copia de seguridad</b>.</div>'}`;
     }
     return `<div class="drop" data-drop${A}>Haz clic aquí o arrastra el archivo.<small>${ACCEPT[d.type].hint}</small></div>
-      ${A ? '' : '<div class="help">Se guarda una copia dentro de HotZapp y entra en tu <b>Copia de seguridad</b>. Te recomendamos tener los originales juntos en una carpeta.</div>'}
+      ${A ? '' : '<div class="help">Se guarda una copia dentro de Whazaa y entra en tu <b>Copia de seguridad</b>. Te recomendamos tener los originales juntos en una carpeta.</div>'}
       <input type="file" hidden accept="${ACCEPT[d.type].accept}" data-file${A}>`;
   }
 

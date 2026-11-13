@@ -1,4 +1,4 @@
-// Arranque de HotZapp: agenda (mensajes programados), avisos de pendientes
+// Arranque de Whazaa: agenda (mensajes programados), avisos de pendientes
 // y puntos de color del CRM en la lista de chats.
 (function () {
   const HZ = globalThis.HZ;
@@ -40,11 +40,11 @@
           const ok = await app.send(reply.id, { direct: true, target: target || undefined, reply });
           if (!ok) throw new Error(app.lastError || 'No se pudo enviar');
           await updateSched(s.id, { status: 'sent', sentAt: Date.now(), error: '' });
-          chrome.runtime.sendMessage({ type: 'notify', title: 'HotZapp', message: `Mensaje programado enviado a ${s.chatName}` });
+          chrome.runtime.sendMessage({ type: 'notify', title: 'Whazaa', message: `Mensaje programado enviado a ${s.chatName}` });
         } catch (e) {
           await updateSched(s.id, { status: 'failed', error: e.message });
           app.status('⚠️ Programado: ' + e.message, 'err');
-          chrome.runtime.sendMessage({ type: 'notify', title: 'HotZapp – no se pudo enviar', message: `${s.chatName}: ${e.message}` });
+          chrome.runtime.sendMessage({ type: 'notify', title: 'Whazaa – no se pudo enviar', message: `${s.chatName}: ${e.message}` });
         }
       }
     } finally {

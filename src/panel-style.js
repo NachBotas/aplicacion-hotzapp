@@ -1,4 +1,4 @@
-// Estilos de HotZapp (van dentro de Shadow DOM para no chocar con WhatsApp).
+// Estilos de Whazaa (van dentro de Shadow DOM para no chocar con WhatsApp).
 globalThis.HZ.PANEL_CSS = `
 :host { all: initial; }
 * { box-sizing: border-box; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -46,7 +46,11 @@ select option { background: var(--bg2); }
 .rail .rb { position: relative; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
 .rail .rb:hover, .rail .rb.on { background: var(--bg3); }
 .rail .rb .lbl { position: absolute; bottom: -3px; font-size: 8px; color: var(--muted); }
-.rail .tog { height: 18px; color: var(--muted); }
+.rail .tog { height: 22px; width: 30px; background: #25d366; color: #fff; border-radius: 7px; margin-bottom: 2px; box-shadow: 0 0 0 2px rgba(37,211,102,.25); }
+.rail .tog:hover { background: #1fbd5a; }
+.rail .tog svg { stroke-width: 3; }
+.rail.collapsed { padding: 3px; width: auto; }
+.rail.collapsed .tog { height: 34px; width: 22px; margin: 0; }
 .cnt { position: absolute; top: -3px; right: -4px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 10px; background: #8d9599; color: #111; font-size: 10px; font-weight: 700; display: grid; place-items: center; }
 .cnt.orange { background: var(--orange); color: #fff; }
 
@@ -75,7 +79,7 @@ select option { background: var(--bg2); }
 .menu .mi .ico .cnt { top: -7px; right: -7px; }
 .menu .brand { display: flex; align-items: center; gap: 8px; padding: 6px 4px 10px; font-size: 14px; }
 .menu .brand b { flex: 1; }
-.logo { width: 22px; height: 22px; border-radius: 6px; background: var(--blue); color: #fff; display: grid; place-items: center; }
+.logo { width: 22px; height: 22px; border-radius: 6px; background: #25d366; color: #fff; display: grid; place-items: center; }
 
 /* respuestas */
 .search { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -251,6 +255,22 @@ h3.sec2 { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; colo
 .addtype:hover { background: var(--bg2); border-color: var(--muted2); }
 .seqbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .wtags { display: inline-flex; gap: 4px; }
+
+/* tutorial */
+.tut { background: var(--bg2); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+.tut-h { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
+.tut-h b { flex: 1; }
+.tut-h .chev { color: var(--muted); transition: transform .15s; transform: rotate(-90deg); }
+.tut.open .tut-h .chev { transform: none; }
+.tut-b { display: none; padding: 0 14px 12px; line-height: 1.6; color: #d5dadd; }
+.tut.open .tut-b { display: block; }
+.tut-b ul, .tut-b ol { margin: 4px 0; padding-left: 18px; }
+.tut-b li { margin: 4px 0; }
+.tut-b p { margin: 6px 0; }
+.tt { width: 100%; border-collapse: collapse; margin: 4px 0; }
+.tt td { padding: 5px 4px; border-top: 1px solid var(--line); vertical-align: top; }
+.tt td:first-child { white-space: nowrap; width: 1%; padding-right: 10px; }
+.newb { background: #25d366; color: #062; font-size: 10px; font-weight: 800; border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
 
 /* popup ";" */
 .pop { position: fixed; z-index: 2147483001; background: #1d1f1f; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.5); max-height: 300px; overflow-y: auto; min-width: 320px; padding: 4px; }

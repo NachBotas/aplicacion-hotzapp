@@ -127,18 +127,18 @@
   const LEEME = `COPIA DE SEGURIDAD DE HOTZAPP
 =============================
 
-Este archivo tiene TODO lo de tu HotZapp:
+Este archivo tiene TODO lo de tu Whazaa:
 - hotzapp.json  → respuestas rápidas, secuencias, CRM, notas, pendientes,
                   agenda y preferencias.
 - archivos/     → los audios, imágenes, videos y documentos de tus respuestas.
 
 CÓMO PASARLO A OTRA COMPUTADORA
-1. Instalá HotZapp en la otra computadora.
-2. Abrí WhatsApp Web → menú de HotZapp → Copia de seguridad.
+1. Instalá Whazaa en la otra computadora.
+2. Abrí WhatsApp Web → menú de Whazaa → Copia de seguridad.
 3. Tocá "Cargar backup" y elegí ESTE archivo .zip (no hace falta descomprimirlo).
 
 IMPORTANTE: no cambies el nombre de las carpetas ni de los archivos de adentro,
-porque HotZapp los busca por su ruta.
+porque Whazaa los busca por su ruta.
 `;
 
   let busy = false;
@@ -196,7 +196,7 @@ porque HotZapp los busca por su ruta.
       const pad = (x) => String(x).padStart(2, '0');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `HotZapp-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.zip`;
+      a.download = `Whazaa-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -217,7 +217,7 @@ porque HotZapp los busca por su ruta.
     // Backups viejos (.json con los archivos adentro)
     if (head[0] === 0x7b /* { */) {
       const json = JSON.parse(dec.decode(ab));
-      if (json.app !== 'hotzapp' || !json.data) throw new Error('Ese archivo no es un backup de HotZapp');
+      if (json.app !== 'hotzapp' || !json.data) throw new Error('Ese archivo no es un backup de Whazaa');
       const data = {};
       const mediaObjs = {};
       for (const [k, v] of Object.entries(json.data)) (k.startsWith('media:') ? mediaObjs : data)[k] = v;
@@ -225,10 +225,10 @@ porque HotZapp los busca por su ruta.
     }
     const entries = await readZip(ab);
     const key = [...entries.keys()].find((k) => k === 'hotzapp.json' || k.endsWith('/hotzapp.json'));
-    if (!key) throw new Error('Ese .zip no es un backup de HotZapp (falta hotzapp.json)');
+    if (!key) throw new Error('Ese .zip no es un backup de Whazaa (falta hotzapp.json)');
     const prefix = key.slice(0, -'hotzapp.json'.length); // por si lo re-comprimieron dentro de una carpeta
     const manifest = JSON.parse(dec.decode(entries.get(key)));
-    if (manifest.app !== 'hotzapp' || !manifest.data) throw new Error('Ese archivo no es un backup de HotZapp');
+    if (manifest.app !== 'hotzapp' || !manifest.data) throw new Error('Ese archivo no es un backup de Whazaa');
     const mediaObjs = {};
     let missing = 0;
     const ids = Object.keys(manifest.media || {});
@@ -328,20 +328,20 @@ porque HotZapp los busca por su ruta.
         <input type="file" hidden accept=".zip,.json,application/zip,application/json" data-bkfile>
         <p class="hint" style="margin-top:8px"><b>Combinar</b> agrega lo del backup que no tengas, sin borrar nada.<br><b>Reemplazar todo</b> borra lo actual y deja exactamente lo del backup (ideal para una compu nueva).</p>
 
-        <h3 class="sec2">Pasar HotZapp a otra computadora</h3>
+        <h3 class="sec2">Pasar Whazaa a otra computadora</h3>
         <div class="item" style="line-height:1.7">
           <b>1.</b> En esta compu: <b>Crear backup</b>.<br>
           <b>2.</b> Pasá el .zip a la otra compu (pendrive, Drive, mail…).<br>
-          <b>3.</b> Allá, instalá HotZapp y abrí WhatsApp Web.<br>
-          <b>4.</b> Menú HotZapp → Copia de seguridad → <b>Reemplazar todo</b> y elegí el .zip. No hace falta descomprimirlo.
+          <b>3.</b> Allá, instalá Whazaa y abrí WhatsApp Web.<br>
+          <b>4.</b> Menú Whazaa → Copia de seguridad → <b>Reemplazar todo</b> y elegí el .zip. No hace falta descomprimirlo.
         </div>
 
         <h3 class="sec2">Sobre tus archivos</h3>
         <div class="item" style="line-height:1.6">
-          📁 Cuando cargás un audio, imagen, video o documento, <b>HotZapp guarda una copia adentro de la extensión</b>: aunque después muevas o borres el original, la respuesta sigue funcionando.<br><br>
-          ⚠️ Pero si desinstalás HotZapp, borrás los datos de Chrome o cambiás de compu, <b>esa copia se pierde</b>. Por eso:<br>
+          📁 Cuando cargás un audio, imagen, video o documento, <b>Whazaa guarda una copia adentro de la extensión</b>: aunque después muevas o borres el original, la respuesta sigue funcionando.<br><br>
+          ⚠️ Pero si desinstalás Whazaa, borrás los datos de Chrome o cambiás de compu, <b>esa copia se pierde</b>. Por eso:<br>
           • Hacé un backup cada tanto (sobre todo después de cargar respuestas nuevas).<br>
-          • Te recomendamos guardar también los <b>archivos originales juntos en una carpeta</b> (por ejemplo <i>Documentos/HotZapp</i>), así siempre los tenés a mano para volver a cargarlos o editarlos.
+          • Te recomendamos guardar también los <b>archivos originales juntos en una carpeta</b> (por ejemplo <i>Documentos/Whazaa</i>), así siempre los tenés a mano para volver a cargarlos o editarlos.
         </div>`;
     }
   };

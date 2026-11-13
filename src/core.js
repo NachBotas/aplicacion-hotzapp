@@ -1,4 +1,4 @@
-// Núcleo de HotZapp dentro de WhatsApp Web: estado, panel, riel y motor de envío.
+// Núcleo de Whazaa dentro de WhatsApp Web: estado, panel, riel y motor de envío.
 (function () {
   const HZ = globalThis.HZ;
   const wa = HZ.wa;
@@ -172,10 +172,11 @@
     const c = app.counts();
     const b = (view, icon, title, n, orange) =>
       `<button class="rb ${app.open && app.view === view ? 'on' : ''}" data-rail="${view}" title="${title}">${I(icon, 17)}${n ? `<span class="cnt ${orange ? 'orange' : ''}">${n}</span>` : ''}</button>`;
+    r.classList.toggle('collapsed', !!collapsed);
     r.innerHTML = collapsed
-      ? `<button class="rb tog" data-rail="__expand" title="Mostrar HotZapp">${I('chevronRight', 14)}</button>`
-      : `<button class="rb tog" data-rail="__collapse" title="Ocultar">${I('chevronLeft', 14)}</button>
-         ${b('menu', 'menu', 'Menú HotZapp')}
+      ? `<button class="rb tog" data-rail="__expand" title="Mostrar Whazaa">${I('chevronRight', 16)}</button>`
+      : `<button class="rb tog" data-rail="__collapse" title="Ocultar">${I('chevronLeft', 16)}</button>
+         ${b('menu', 'menu', 'Menú Whazaa')}
          ${b('replies', 'bolt', 'Respuestas rápidas')}
          ${b('tasks', 'listCheck', 'Pendientes', c.tasks, true)}
          ${b('notes', 'notes', 'Notas del chat', c.notes)}

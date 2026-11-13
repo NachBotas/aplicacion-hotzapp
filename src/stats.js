@@ -47,6 +47,8 @@
       const st = HZ.tracker.compute(from, to);
       const limit = (Number(s.waitMinutes) || 15) * MIN;
       const waits = HZ.tracker.waiting().slice(0, 30);
+      const followMs = (Number(s.followMinutes) || 60) * MIN;
+      const follows = HZ.tracker.followups(followMs);
       const tile = (label, val, sub = '', warn = false) =>
         `<div class="item" style="margin:0"><div class="m" style="margin:0 0 2px">${label}</div><div style="font-size:20px;font-weight:700;${warn ? 'color:#f87171' : ''}">${val}</div>${sub ? `<div class="m">${sub}</div>` : ''}</div>`;
 
@@ -55,10 +57,11 @@
         const arr = [];
         for (let d = startOfDay(from); d <= to; d += DAY) arr.push({ d, c: HZ.tracker.compute(d, Math.min(to, d + DAY - 1)) });
         const max = Math.max(1, ...arr.map((x) => x.c.conversations));
-        days = `<h3 class="sec2">Conversaciones por día</h3>
+        days = `<h3 class="sec2">Conversaciones por día <span style="text-transform:none;font-weight:400">· <span style="color:#4ade80">■</span> nuevas <span style="color:#7aa7ff">■</span> ya existían</span></h3>
           <div class="item" style="display:flex;align-items:flex-end;gap:${range === 'week' ? 8 : 2}px;height:120px;padding:10px">
-            ${arr.map((x) => `<div title="${fDate(x.d)}: ${x.c.conversations} conversaciones · ${x.c.answered}/${x.c.withIncoming} respondidas" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%">
-              <div style="width:100%;background:var(--blue);border-radius:3px 3px 0 0;height:${Math.max(2, (x.c.conversations / max) * 80)}px"></div>
+            ${arr.map((x) => `<div title="${fDate(x.d)}: ${x.c.conversations} conversaciones (${x.c.newConversations} nuevas, ${x.c.existingConversations} ya existían) · ${x.c.answered}/${x.c.withIncoming} respondidas" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%">
+              <div style="width:100%;background:#4ade80;border-radius:3px 3px 0 0;height:${(x.c.newConversations / max) * 80}px"></div>
+              <div style="width:100%;background:var(--blue);height:${Math.max(2, (x.c.existingConversations / max) * 80)}px"></div>
               ${range === 'week' ? `<div class="m" style="font-size:10px;margin-top:3px">${new Date(x.d).toLocaleDateString('es-AR', { weekday: 'short' })}</div>` : ''}</div>`).join('')}
           </div>`;
       }
@@ -66,7 +69,16 @@
       body.innerHTML = `
         <div class="seg" style="margin-bottom:12px">${Object.entries(RANGES).map(([k, r]) => `<button data-range="${k}" class="${range === k ? 'on' : ''}">${k === 'today' ? 'Hoy' : k === 'week' ? '7 días' : '30 días'}</button>`).join('')}</div>
         <div class="two">
-          ${tile('Conversaciones', st.conversations, `${st.newConversations} nuevas`)}
+        </div>
+        <div class="item" style="margin:0 0 8px;display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:6px">
+          <div><div class="m" style="margin:0">🆕 Nuevas</div><div style="font-size:24px;font-weight:800;color:#4ade80">${st.newConversations}</div>
+            <div class="m" style="margin:0;font-size:11px">${st.newByClient} del cliente · ${st.newByMe} tuyas</div></div>
+          <div style="border-left:1px solid var(--line);border-right:1px solid var(--line)"><div class="m" style="margin:0">↩ Ya existían</div><div style="font-size:24px;font-weight:800">${st.existingConversations}</div>
+            <div class="m" style="margin:0;font-size:11px">siguieron hablando</div></div>
+          <div><div class="m" style="margin:0">Σ Totales</div><div style="font-size:24px;font-weight:800;color:#7aa7ff">${st.conversations}</div>
+            <div class="m" style="margin:0;font-size:11px">con mensajes</div></div>
+        </div>
+        <div class="two">
           ${tile('Respondidas', `${st.answered}/${st.withIncoming}`, st.withIncoming ? pct(st.answered / st.withIncoming) : '')}
           ${tile('Tiempo de respuesta', HZ.fmtDur(st.avgRt), `mediana ${HZ.fmtDur(st.medianRt)}`)}
           ${tile('Sin responder', st.unanswered, `máx. espera ${HZ.fmtDur(st.maxRt)}`, st.unanswered > 0)}
@@ -78,6 +90,14 @@
         <button class="btn ghost" style="width:100%;margin-top:8px" data-st="verify">${I('check', 15)} Verificar un archivo recibido</button>
         <input type="file" hidden accept=".xlsx" data-stfile>
 
+        ${HZ.tracker.syncing ? '<p class="hint">🔄 Leyendo el historial de WhatsApp…</p>' : HZ.tracker.meta.synced ? `<p class="hint">✓ Historial de WhatsApp leído ${fDateTime(HZ.tracker.meta.synced)}</p>` : '<p class="hint">Sin motor rápido: se mide desde que Whazaa está abierto (los chats que ya existían al instalarlo cuentan como “ya existían”).</p>'}
+        <h3 class="sec2">Para hacer seguimiento (${follows.length})</h3>
+        <p class="hint" style="margin-top:-4px">Clientes que no te contestan hace más de ${HZ.fmtDur(followMs)}. No incluye Cerrado ni Perdido.</p>
+        ${follows.length ? follows.slice(0, 30).map((w) => `<div class="item"><div class="row"><span class="t grow">${esc(w.name)}</span>
+            <span class="badge pending">↩ ${HZ.fmtDur(w.wait)}</span>
+            <button class="btn sm ghost" data-stopen="${esc(w.name)}">Abrir</button></div>
+            <div class="m">tu último mensaje: ${fDateTime(w.since)}</div></div>`).join('') : '<div class="empty">Nadie pendiente de seguimiento.</div>'}
+
         <h3 class="sec2">Esperando respuesta ahora (${waits.length})</h3>
         ${waits.length ? waits.map((w) => `<div class="item"><div class="row"><span class="t grow">${esc(w.name)}</span>
             <span class="badge ${w.wait >= limit ? 'failed' : 'pending'}">⏱ ${HZ.fmtDur(w.wait)}</span>
@@ -88,10 +108,11 @@
         <div class="pref"><span class="grow">Avisar cuando alguien espera respuesta</span><div class="sw ${s.waitAlert ? 'on' : ''}" data-stset="waitAlert"><span class="tr"></span></div></div>
         <div class="row" style="margin:4px 0 8px"><span class="grow help" style="margin:0">Avisar después de</span><input type="number" min="1" max="1440" data-stmin value="${s.waitMinutes}" style="width:80px"><span class="help" style="margin:0">min</span></div>
         <div class="pref"><span class="grow">Mostrar el temporizador en la lista de chats</span><div class="sw ${s.listShowTimer ? 'on' : ''}" data-stset="listShowTimer"><span class="tr"></span></div></div>
+        <div class="row" style="margin:10px 0 8px"><span class="grow help" style="margin:0">Seguimiento: clientes sin responder hace más de</span><input type="number" min="5" max="10080" data-stfollow value="${s.followMinutes}" style="width:80px"><span class="help" style="margin:0">min</span></div>
         <div class="pref"><span class="grow">Incluir grupos en las estadísticas</span><div class="sw ${s.statsGroups ? 'on' : ''}" data-stset="statsGroups"><span class="tr"></span></div></div>
 
         <h3 class="sec2">Cómo se mide</h3>
-        <p class="hint" style="line-height:1.6">WhatsApp no guarda estas estadísticas en cuentas normales, así que HotZapp las calcula <b>desde que está instalado</b>, mientras WhatsApp Web esté abierto: mira la lista de chats y lee la hora exacta de los mensajes de cada chat que abrís. Si se responde desde el celular con WhatsApp Web cerrado, se registra la próxima vez que se abra ese chat en la compu.<br>
+        <p class="hint" style="line-height:1.6">WhatsApp no guarda estas estadísticas en cuentas normales, así que Whazaa las calcula <b>desde que está instalado</b>, mientras WhatsApp Web esté abierto: mira la lista de chats y lee la hora exacta de los mensajes de cada chat que abrís. Si se responde desde el celular con WhatsApp Web cerrado, se registra la próxima vez que se abra ese chat en la compu.<br>
         <b>Tiempo de respuesta</b>: desde el primer mensaje del cliente sin contestar hasta tu respuesta.</p>`;
     }
   };
@@ -110,9 +131,12 @@
   body.addEventListener('change', async (e) => {
     if (app.view !== 'stats') return;
     if (e.target.matches('[data-stmin]')) await app.saveSettings({ waitMinutes: Math.max(1, Number(e.target.value) || 15) });
+    if (e.target.matches('[data-stfollow]')) await app.saveSettings({ followMinutes: Math.max(5, Number(e.target.value) || 60) });
     if (e.target.matches('[data-stfile]') && e.target.files[0]) verifyFile(e.target.files[0]);
   });
   // refrescar los números cada minuto mientras se mira
+  // al abrir Estadísticas, leer el historial si hace falta
+  app.onShowStats = () => HZ.tracker && HZ.tracker.syncHistory(false);
   setInterval(() => {
     const a = app.root.activeElement;
     if (app.open && app.view === 'stats' && !(a && a.matches('input'))) app.render();
@@ -199,8 +223,11 @@
 
   function summaryRows(st) {
     return [
-      ['Conversaciones', st.conversations],
-      ['Conversaciones nuevas', st.newConversations],
+      ['Conversaciones nuevas (empezaron en el período)', st.newConversations],
+      ['   ↳ iniciadas por el cliente', st.newByClient],
+      ['   ↳ iniciadas por vos', st.newByMe],
+      ['Conversaciones que ya existían', st.existingConversations],
+      ['Conversaciones totales', st.conversations],
       ['Conversaciones con mensajes del cliente', st.withIncoming],
       ['Respondidas', st.answered],
       ['Sin responder', st.unanswered],
@@ -232,7 +259,7 @@
     };
 
     const resumen = [
-      { cells: ['Estadísticas de WhatsApp · HotZapp'], style: 3 },
+      { cells: ['Estadísticas de WhatsApp · Whazaa'], style: 3 },
       [],
       ['Período', RANGES[key].label],
       ['Desde', fDateTime(from)],
@@ -245,25 +272,25 @@
       { cells: ['Indicador', 'Valor'], style: 2 },
       ...sum,
       [],
-      ['Cómo se mide: HotZapp registra los chats mientras WhatsApp Web está abierto en esta computadora.'],
+      ['Cómo se mide: Whazaa lee el historial de WhatsApp de cada chat (nuevas = la conversación empezó en el período; ya existían = había mensajes de antes).'],
       ['Tiempo de respuesta = desde el primer mensaje del cliente sin contestar hasta la respuesta.']
     ];
 
-    const porDia = [{ cells: ['Fecha', 'Conversaciones', 'Nuevas', 'Con mensajes del cliente', 'Respondidas', 'Sin responder', 'Recibidos', 'Enviados', 'T. respuesta promedio (min)', 'T. respuesta mediana (min)'], style: 2 }];
+    const porDia = [{ cells: ['Fecha', 'Nuevas', 'Ya existían', 'Totales', 'Con mensajes del cliente', 'Respondidas', 'Sin responder', 'Recibidos', 'Enviados', 'T. respuesta promedio (min)', 'T. respuesta mediana (min)'], style: 2 }];
     for (let d = startOfDay(from); d <= to; d += DAY) {
       const c = HZ.tracker.compute(d, Math.min(to, d + DAY - 1));
-      porDia.push([new Date(d).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }), c.conversations, c.newConversations, c.withIncoming, c.answered, c.unanswered, c.received, c.sent, mins(c.avgRt), mins(c.medianRt)]);
+      porDia.push([new Date(d).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }), c.newConversations, c.existingConversations, c.conversations, c.withIncoming, c.answered, c.unanswered, c.received, c.sent, mins(c.avgRt), mins(c.medianRt)]);
     }
 
-    const convs = [{ cells: ['Chat', 'Etapa CRM', 'Recibidos', 'Enviados', 'Nueva', 'Respondida', 'T. respuesta promedio (min)', 'Espera más larga (min)', 'Último mensaje', 'Esperando respuesta desde'], style: 2 }];
+    const convs = [{ cells: ['Chat', 'Etapa CRM', 'Recibidos', 'Enviados', 'Nueva', 'Inició', 'Respondida', 'T. respuesta promedio (min)', 'Espera más larga (min)', 'Último mensaje', 'Esperando respuesta desde'], style: 2 }];
     for (const c of st.chats) {
-      convs.push([c.name, stageName(c.name), c.received, c.sent, c.isNew ? 'Sí' : 'No', c.answered === null ? '—' : c.answered ? 'Sí' : 'No', mins(c.avgRt), mins(c.maxRt), fDateTime(c.last), c.pending ? fDateTime(c.pendingSince) : '']);
+      convs.push([c.name, stageName(c.name), c.received, c.sent, c.isNew ? 'Sí' : 'No', c.startedBy === 'client' ? 'Cliente' : c.startedBy === 'me' ? 'Vos' : '—', c.answered === null ? '—' : c.answered ? 'Sí' : 'No', mins(c.avgRt), mins(c.maxRt), fDateTime(c.last), c.pending ? fDateTime(c.pendingSince) : '']);
     }
 
     const blob = buildXlsx([
       { name: 'Resumen', rows: resumen, widths: [40, 34] },
-      { name: 'Por día', rows: porDia, widths: [30, 15, 10, 22, 12, 13, 11, 11, 24, 24] },
-      { name: 'Conversaciones', rows: convs, widths: [30, 20, 11, 11, 8, 11, 24, 20, 20, 24] },
+      { name: 'Por día', rows: porDia, widths: [30, 10, 12, 10, 22, 12, 13, 11, 11, 24, 24] },
+      { name: 'Conversaciones', rows: convs, widths: [30, 20, 11, 11, 8, 9, 11, 24, 20, 20, 24] },
       { name: 'verificacion', hidden: true, rows: [[payload], [code]] }
     ]);
     const d = new Date(gen);
@@ -327,7 +354,7 @@
     try {
       const sheets = await readSheets(file);
       const ver = sheets.verificacion;
-      if (!ver || !ver[0] || !ver[1]) throw new Error('Este Excel no fue exportado por HotZapp (no tiene datos de verificación).');
+      if (!ver || !ver[0] || !ver[1]) throw new Error('Este Excel no fue exportado por Whazaa (no tiene datos de verificación).');
       const payload = ver[0][0];
       const code = ver[1][0];
       const data = JSON.parse(payload);
@@ -358,7 +385,7 @@
     }
     const m = app.modal(`
       <h2>${ok ? '✅ Archivo original' : '⚠️ No se puede confirmar'}</h2>
-      <div class="mb scroll"><p class="hint" style="text-align:center">${ok ? 'Los números coinciden con lo que registró HotZapp: nadie los modificó.' : 'Este archivo fue modificado o no es una exportación de HotZapp.'}</p>${html}</div>
+      <div class="mb scroll"><p class="hint" style="text-align:center">${ok ? 'Los números coinciden con lo que registró Whazaa: nadie los modificó.' : 'Este archivo fue modificado o no es una exportación de Whazaa.'}</p>${html}</div>
       <div class="mf"><button class="btn" data-vclose>Cerrar</button></div>`);
     m.querySelector('[data-vclose]').onclick = () => app.closeModal();
   }

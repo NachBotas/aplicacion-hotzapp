@@ -1,7 +1,7 @@
 // Corre en el contexto de la página (world: MAIN) antes que WhatsApp Web.
 //
 // Truco para que los audios salgan como NOTA DE VOZ "recién grabada":
-// cuando HotZapp va a mandar un audio, reemplazamos por un instante el micrófono
+// cuando Whazaa va a mandar un audio, reemplazamos por un instante el micrófono
 // (getUserMedia) por un stream que reproduce el audio guardado. Después se aprieta
 // el botón de grabar de WhatsApp, que "graba" ese audio en tiempo real, y al terminar
 // se envía. Para el que lo recibe es una nota de voz normal (con onda, "grabando
@@ -86,7 +86,7 @@
     md.enumerateDevices = async function () {
       const list = await origEnum();
       if (isPending() && !list.some((d) => d.kind === 'audioinput')) {
-        list.push({ deviceId: 'hotzapp', groupId: 'hotzapp', kind: 'audioinput', label: 'HotZapp', toJSON() { return this; } });
+        list.push({ deviceId: 'hotzapp', groupId: 'hotzapp', kind: 'audioinput', label: 'Whazaa', toJSON() { return this; } });
       }
       return list;
     };

@@ -17,10 +17,11 @@
   V.menu = {
     render(head, body) {
       const c = app.counts();
-      head.innerHTML = app.header(`<span class="logo">${I('bolt', 14)}</span>HotZapp`);
+      head.innerHTML = app.header(`<span class="logo">${I('bolt', 14)}</span>Whazaa`);
       const mi = (view, icon, label, n, orange) =>
         `<div class="mi" data-open="${view}"><span class="t">${label}</span><span class="ico">${I(icon, 19)}${n ? `<span class="cnt ${orange ? 'orange' : ''}">${n}</span>` : ''}</span></div>`;
       body.innerHTML = `<div class="menu">
+        <div class="mi" data-open="tutorial" style="background:#25d36614;border:1px solid #25d36640;margin:2px 0 6px"><span class="t">📖 Tutorial: cómo usar Whazaa${S().settings.tutorialSeen ? '' : '<span class="newb">NUEVO</span>'}</span><span class="ico" style="color:#25d366">${I('chevronRight', 18)}</span></div>
         <div class="sec">Tu día</div>
         ${mi('tasks', 'bell', 'Pendientes', c.tasks, true)}
         ${mi('agenda', 'calendar', 'Agenda', c.agenda)}
@@ -400,13 +401,14 @@
         ${sw('listShowStage', 'Mostrar la etapa del CRM al lado del nombre')}
         ${sw('listShowLabels', 'Mostrar las etiquetas de WhatsApp Business')}
         ${sw('listShowTimer', 'Mostrar el temporizador de espera (⏱)')}
+        ${sw('listShowFollow', 'Mostrar “↩ sin respuesta” para hacer seguimiento')}
         <h3 class="sec2">Panel</h3>
         <div class="field"><label>Ancho del panel (px)</label><input type="number" min="280" max="600" data-setv="panelWidth" value="${s.panelWidth}"></div>
         <h3 class="sec2">Copia de seguridad</h3>
         <p class="hint">Exportá todo (respuestas, audios, imágenes, videos, documentos, CRM, notas y agenda) en un .zip para pasarlo a otra computadora.</p>
         <button class="btn ghost" style="width:100%" data-open="backup">${I('archive', 15)} Ir a Copia de seguridad</button>
         <h3 class="sec2">Uso responsable</h3>
-        <p class="hint">No uses HotZapp para spam ni envíos masivos a gente que no te escribió: WhatsApp puede restringir números con muchos reportes.</p>`;
+        <p class="hint">No uses Whazaa para spam ni envíos masivos a gente que no te escribió: WhatsApp puede restringir números con muchos reportes.</p>`;
     }
   };
   body.addEventListener('click', async (e) => {

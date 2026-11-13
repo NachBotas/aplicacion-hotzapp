@@ -1,5 +1,5 @@
 // Etiquetas al lado de cada nombre en la lista de chats:
-//  · la etapa del CRM de HotZapp (con su nombre y color)
+//  · la etapa del CRM de Whazaa (con su nombre y color)
 //  · las etiquetas de WhatsApp Business del chat (si usás WhatsApp Business)
 //  · el temporizador rojo "⏱ 25 min" si el cliente está esperando respuesta
 // Todo va en un único contenedor, así nada se pisa ni desaparece.
@@ -35,6 +35,9 @@
     const s = app.state.settings;
     const stages = Object.fromEntries(app.state.stages.map((x) => [x.id, x]));
     const limit = (Number(s.waitMinutes) || 15) * MIN;
+    const follows = s.listShowFollow && HZ.tracker
+      ? Object.fromEntries(HZ.tracker.followups((Number(s.followMinutes) || 60) * MIN).map((w) => [w.name, w]))
+      : {};
     const waits = s.waitAlert && s.listShowTimer && HZ.tracker
       ? Object.fromEntries(HZ.tracker.waiting().filter((w) => w.wait >= limit).map((w) => [w.name, w]))
       : {};
@@ -48,12 +51,15 @@
       if (row.querySelector('span[title]') !== span) return; // sólo el nombre, no la vista previa
       const name = span.getAttribute('title');
       const parts = [];
+      // primero lo urgente (tiempos), después etapa y etiquetas
+      const w0 = waits[name];
+      if (w0) parts.push(chip('⏱ ' + HZ.fmtDur(w0.wait), '#f05252', true));
+      const f0 = follows[name];
+      if (f0) parts.push(chip('↩ ' + HZ.fmtDur(f0.wait), '#f5a524', true));
       const c = app.state.contacts[name];
       const st = s.listShowStage && c && stages[c.stageId];
       if (st) parts.push(chip(st.name, st.color));
       if (s.listShowLabels) for (const l of (app.waLabels[name] || []).slice(0, 3)) parts.push(chip(l.name, l.color));
-      const w = waits[name];
-      if (w) parts.push(chip('⏱ ' + HZ.fmtDur(w.wait), '#f05252', true));
       let box = row.querySelector('.hz-deco');
       if (!parts.length) { if (box) box.remove(); return; }
       const html = parts.join('');
@@ -61,7 +67,7 @@
         if (box) box.remove();
         box = document.createElement('span');
         box.className = 'hz-deco';
-        box.style.cssText = 'display:inline-flex;gap:4px;align-items:center;margin:0 4px 0 6px;vertical-align:middle;flex:none';
+        box.style.cssText = 'display:inline-flex;gap:4px;align-items:center;margin:0 4px 0 6px;vertical-align:middle;flex:0 1 auto;min-width:0;max-width:60%;overflow:hidden';
         span.after(box);
       }
       if (box.dataset.sig !== html) { box.innerHTML = html; box.dataset.sig = html; }

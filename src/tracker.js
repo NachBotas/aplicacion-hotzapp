@@ -1,7 +1,7 @@
 // Registro de conversaciones para las estadísticas.
 //
 // WhatsApp no guarda estadísticas de tiempos de respuesta en cuentas normales,
-// así que HotZapp las mide mientras WhatsApp Web está abierto, con dos fuentes:
+// así que Whazaa las mide mientras WhatsApp Web está abierto, con dos fuentes:
 //  1) La lista de chats: detecta cuándo entra un mensaje nuevo (cambia la hora,
 //     aparece el contador de no leídos) y si el último mensaje es tuyo (tildes).
 //  2) El chat abierto: lee cada mensaje con su hora exacta y si es tuyo o del
@@ -16,7 +16,8 @@
   const KEEP_DAYS = 120;
   const MIN = 60000;
   const DAY = 86400000;
-  let track = {}; // { [nombre]: { g: esGrupo, ev: { [id]: [t, out] }, alertedFor } }
+  let track = {}; // { [nombre]: { g: esGrupo, ev: { [id]: [t, out] }, alertedFor, firstAt, before } }
+  let meta = { start: 0, synced: 0 }; // start = desde cuándo mide Whazaa; synced = última lectura del historial
   let dirty = false;
   const writeId = Math.random().toString(36).slice(2);
   const listState = {}; // firma de cada fila de la lista
@@ -93,6 +94,8 @@
   async function load() {
     const r = await chrome.storage.local.get('track');
     track = (r.track && r.track.chats) || {};
+    meta = { start: 0, synced: 0, ...((r.track && r.track.meta) || {}) };
+    if (!meta.start) { meta.start = Date.now(); dirty = true; }
   }
   async function flush() {
     if (!dirty) return;
@@ -101,7 +104,7 @@
     for (const rec of Object.values(track)) {
       for (const [id, e] of Object.entries(rec.ev)) if (e[0] < cutoff) delete rec.ev[id];
     }
-    await chrome.storage.local.set({ track: { w: writeId, chats: track } });
+    await chrome.storage.local.set({ track: { w: writeId, chats: track, meta } });
   }
   chrome.storage.onChanged.addListener((ch, area) => {
     if (area === 'local' && ch.track && (!ch.track.newValue || ch.track.newValue.w !== writeId)) load();
@@ -227,6 +230,19 @@
     return Object.values(r.ev).sort((a, b) => a[0] - b[0]);
   }
 
+  // Cuándo empezó realmente la conversación:
+  //  · firstAt: el historial de WhatsApp llegó hasta el primer mensaje
+  //  · before: sabemos que había mensajes antes de esa fecha
+  //  · si no, el primer mensaje que vimos; si es de cuando se instaló Whazaa, se
+  //    toma como conversación que ya existía.
+  function firstOf(r, evs) {
+    if (r.firstAt) return r.firstAt;
+    if (r.before) return Math.min(r.before - 1, evs.length ? evs[0][0] : Infinity);
+    const mn = evs.length ? evs[0][0] : Infinity;
+    if (mn <= (meta.start || 0) + 5 * MIN) return -Infinity;
+    return mn;
+  }
+
   // Quién está esperando respuesta ahora
   function waiting() {
     const out = [];
@@ -241,6 +257,27 @@
       out.push({ name, since, wait: Date.now() - since });
     }
     return out.sort((a, b) => b.wait - a.wait);
+  }
+
+  // Para hacer seguimiento: el último mensaje es tuyo y el cliente no contesta
+  // hace más de `minMs` (por defecto 1 hora). Se excluyen Cerrado y Perdido.
+  const CLOSED = new Set(['cerrado', 'perdido']);
+  function followups(minMs) {
+    const out = [];
+    const now = Date.now();
+    for (const [name, r] of Object.entries(track)) {
+      if (r.g && !includeGroups()) continue;
+      const c = app.state.contacts[name];
+      if (c && CLOSED.has(c.stageId)) continue;
+      const ls = listState[name];
+      if (ls && ls.unread) continue;
+      const evs = sortedEvents(r);
+      const last = evs[evs.length - 1];
+      if (!last || !last[1]) continue;
+      const wait = now - last[0];
+      if (wait >= minMs && wait <= 30 * DAY) out.push({ name, since: last[0], wait });
+    }
+    return out.sort((a, b) => a.wait - b.wait);
   }
 
   // Estadísticas de un período [from, to]
@@ -269,9 +306,12 @@
       const answered = firstIn ? inP.some((e) => e[1] && e[0] >= firstIn[0]) : null;
       const pending = waitStart !== null;
       rts.push(...chatRts);
+      const first = firstOf(r, evs);
+      const isNew = first >= from && first <= to;
       chats.push({
         name, received, sent,
-        isNew: evs[0][0] >= from,
+        isNew,
+        startedBy: isNew ? (inP[0][1] ? 'me' : 'client') : null,
         answered, pending,
         pendingSince: pending ? waitStart : null,
         avgRt: chatRts.length ? chatRts.reduce((a, b) => a + b, 0) / chatRts.length : null,
@@ -285,6 +325,9 @@
       from, to,
       conversations: chats.length,
       newConversations: chats.filter((c) => c.isNew).length,
+      newByClient: chats.filter((c) => c.startedBy === 'client').length,
+      newByMe: chats.filter((c) => c.startedBy === 'me').length,
+      existingConversations: chats.filter((c) => !c.isNew).length,
       received: chats.reduce((a, c) => a + c.received, 0),
       sent: chats.reduce((a, c) => a + c.sent, 0),
       withIncoming: withIn.length,
@@ -326,20 +369,60 @@
       dirty = true;
       const txt = `⏱ ${w.name} espera respuesta hace ${HZ.fmtDur(w.wait)}`;
       app.toast(txt, 6000);
-      chrome.runtime.sendMessage({ type: 'notify', title: 'HotZapp · cliente esperando', message: txt.slice(2) });
+      chrome.runtime.sendMessage({ type: 'notify', title: 'Whazaa · cliente esperando', message: txt.slice(2) });
     }
   }
 
-  HZ.tracker = { compute, waiting, parsePre, parseListLabel, get data() { return track; }, flush };
+  // ---------- historial real (WA-JS) ----------
+  let syncing = false;
+  async function syncHistory(force) {
+    if (syncing || !HZ.api || !HZ.api.ready) return;
+    const now = Date.now();
+    const d = new Date(now);
+    const monthAgo = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 31).getTime();
+    if (!force && meta.synced && now - meta.synced < 10 * MIN) return;
+    const from = meta.synced ? Math.max(monthAgo, meta.synced - 2 * 3600000) : monthAgo;
+    syncing = true;
+    HZ.tracker.syncing = true;
+    try {
+      const list = await HZ.api.call('history', from, 400);
+      for (const c of list || []) {
+        if (!c.name) continue;
+        const r = rec(c.name);
+        r.g = !!c.group;
+        r.chatId = c.id;
+        // lo que vino de la lista se reemplaza por el historial real
+        for (const [id, e] of Object.entries(r.ev)) if (id[0] === 'L' && e[0] >= from) delete r.ev[id];
+        for (const [id, t, out] of c.msgs) r.ev[id] = [t, out];
+        if (c.firstAt) r.firstAt = c.firstAt;
+        if (c.hasBefore) r.before = Math.min(r.before || Infinity, from);
+      }
+      meta.synced = now;
+      dirty = true;
+      await flush();
+      if (app.open && app.view === 'stats') app.render();
+    } catch (e) {
+      console.warn('Whazaa: no se pudo leer el historial', e);
+    } finally {
+      syncing = false;
+      HZ.tracker.syncing = false;
+    }
+  }
+
+  HZ.tracker = { compute, waiting, followups, syncHistory, parsePre, parseListLabel, get data() { return track; }, get meta() { return meta; }, flush, syncing: false };
 
   app.afterBoot = app.afterBoot || [];
   app.afterBoot.push(async () => {
     await load();
     const tick = () => {
-      try { scanList(); harvestOpen(); } catch (e) { console.warn('HotZapp tracker', e); }
+      try { scanList(); harvestOpen(); } catch (e) { console.warn('Whazaa tracker', e); }
     };
     tick();
     setInterval(tick, 2500);
+    // leer el historial real apenas esté listo el motor rápido, y cada 10 minutos
+    const trySync = () => syncHistory(false);
+    setTimeout(trySync, 8000);
+    setInterval(trySync, 60000);
     setInterval(flush, 5000);
     setInterval(() => { checkWaiting(); app.renderRail(); }, 20000);
     setTimeout(() => { checkWaiting(); app.renderRail(); }, 4000);
