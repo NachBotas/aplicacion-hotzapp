@@ -57,9 +57,40 @@
     return null;
   };
 
-  const composeBox = () => first(SEL.compose);
+  // Caja "Escribe un mensaje": primero los selectores conocidos; si WhatsApp
+  // cambió la página, el campo editable de más abajo dentro del chat.
+  function composeBox() {
+    const known = first(SEL.compose);
+    if (known) return known;
+    const main = document.querySelector(SEL.main);
+    if (!main) return null;
+    let best = null;
+    let bestBottom = -1;
+    for (const el of main.querySelectorAll('[contenteditable="true"]')) {
+      if (!visible(el) || el.closest('#hotzapp-root,#hotzapp-bar,header')) continue;
+      const b = el.getBoundingClientRect().bottom;
+      if (b > bestBottom) { best = el; bestBottom = b; }
+    }
+    return best;
+  }
   const searchBox = () => first(SEL.search);
-  const footer = () => document.querySelector(SEL.footer);
+
+  // Zona de la caja de mensaje (con el +, emojis y micrófono). Antes era siempre
+  // <footer>; ahora la buscamos subiendo desde la caja hasta antes de la conversación.
+  function composeArea(box = composeBox()) {
+    const main = document.querySelector(SEL.main);
+    if (!box || !main) return null;
+    const f = box.closest('footer');
+    if (f && main.contains(f)) return f;
+    let el = box;
+    while (el.parentElement && el.parentElement !== main) {
+      const r = el.parentElement.getBoundingClientRect();
+      if (r.height > 260) break; // ya sería toda la conversación
+      el = el.parentElement;
+    }
+    return el;
+  }
+  const footer = () => composeArea() || document.querySelector(SEL.footer);
 
   function findButton(root, iconRe, labelRe, exclude) {
     if (!root) return null;
@@ -435,7 +466,7 @@
 
   HZ.wa = {
     sleep, waitFor, visible, norm, sameChat,
-    composeBox, searchBox, footer, chatTitle, digits,
+    composeBox, composeArea, searchBox, footer, chatTitle, digits,
     sendText, insertText, sendFile, sendVoice, sendContact, openChat, realClick, cancelRecording
   };
 })();

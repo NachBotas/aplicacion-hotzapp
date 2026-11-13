@@ -177,19 +177,53 @@
   document.addEventListener('mousedown', closeIfOutside, true);
 
   // ---------- montar la barra debajo de la caja de mensaje ----------
-  // La barra va pegada a la caja de mensaje: justo debajo (o encima, según Herramientas).
+  // La barra va pegada a la caja "Escribe un mensaje": justo debajo (o encima,
+  // según Herramientas). Después de ubicarla se verifica en pantalla que quedó
+  // donde corresponde; si no, se prueba la siguiente ubicación.
+  let strategy = 0;
+  let badChecks = 0;
+  const STRATS = {
+    below: [(a) => a.after(barHost), (a) => a.appendChild(barHost), (a) => a.parentElement && a.parentElement.after(barHost)],
+    above: [(a) => a.before(barHost), (a) => a.prepend(barHost), (a) => a.parentElement && a.parentElement.before(barHost)]
+  };
+  function placedOk(area, above) {
+    const a = area.getBoundingClientRect();
+    const b = barHost.getBoundingClientRect();
+    if (!b.height || b.bottom > window.innerHeight + 2 || b.top < 0) return false;
+    // que se vea de verdad (no tapada ni recortada)
+    const hit = document.elementFromPoint(Math.min(window.innerWidth - 2, b.left + 40), b.top + b.height / 2);
+    if (hit && hit.id === 'hotzapp-root') return true; // un aviso nuestro la tapa un momento
+    if (hit !== barHost) return false;
+    const box = wa.composeBox();
+    const ref = box ? box.getBoundingClientRect() : a;
+    return above ? b.bottom <= ref.top + 4 : b.top >= ref.bottom - 4;
+  }
   function mountBar() {
-    const footer = document.querySelector('#main footer');
-    const show = S() && S().settings.showBar && footer;
+    const area = wa.composeArea();
+    const show = S() && S().settings.showBar && area;
     if (!show) { if (barHost.isConnected) barHost.remove(); return; }
     const above = S().settings.barPosition === 'above';
-    const ok = above ? footer.previousElementSibling === barHost : footer.nextElementSibling === barHost;
-    if (!ok) {
-      if (above) footer.before(barHost);
-      else footer.after(barHost);
+    const list = STRATS[above ? 'above' : 'below'];
+    if (!barHost.isConnected || !area.contains(barHost) && barHost.previousElementSibling !== area && barHost.nextElementSibling !== area && !(area.parentElement && (barHost.previousElementSibling === area.parentElement || barHost.nextElementSibling === area.parentElement))) {
+      list[strategy % list.length](area);
       renderBar();
+      badChecks = 0;
+      return;
+    }
+    if (placedOk(area, above)) { badChecks = 0; return; }
+    if (++badChecks >= 2) {
+      strategy = (strategy + 1) % list.length;
+      list[strategy](area);
+      renderBar();
+      badChecks = 0;
     }
   }
+  app.onState = app.onState || [];
+  let lastPos = null;
+  app.onState.push(() => {
+    const p = S() && S().settings.barPosition;
+    if (p !== lastPos) { lastPos = p; strategy = 0; if (barHost.isConnected) barHost.remove(); }
+  });
 
   // ---------- atajo ";" en la caja de mensaje ----------
   const pop = app.el.pop;
