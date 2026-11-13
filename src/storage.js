@@ -39,6 +39,7 @@
       myName: '',
       stepDelay: 2,
       showBar: true,
+      barPosition: 'below', // 'below' = debajo de la caja de mensaje | 'above' = encima
       barCollapsed: false,
       chipStyle: 'icon', // 'icon' | 'color'
       directSend: true, // "Mensaje sale directo"

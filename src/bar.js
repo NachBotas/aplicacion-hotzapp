@@ -177,12 +177,16 @@
   document.addEventListener('mousedown', closeIfOutside, true);
 
   // ---------- montar la barra debajo de la caja de mensaje ----------
+  // La barra va pegada a la caja de mensaje: justo debajo (o encima, según Herramientas).
   function mountBar() {
-    const main = document.querySelector('#main');
-    const show = S() && S().settings.showBar && main && main.querySelector('footer');
+    const footer = document.querySelector('#main footer');
+    const show = S() && S().settings.showBar && footer;
     if (!show) { if (barHost.isConnected) barHost.remove(); return; }
-    if (barHost.parentNode !== main) {
-      main.appendChild(barHost);
+    const above = S().settings.barPosition === 'above';
+    const ok = above ? footer.previousElementSibling === barHost : footer.nextElementSibling === barHost;
+    if (!ok) {
+      if (above) footer.before(barHost);
+      else footer.after(barHost);
       renderBar();
     }
   }

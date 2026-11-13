@@ -389,6 +389,7 @@
         <div class="field"><label>Duración por defecto de un temporizador nuevo (secuencias)</label><div class="row"><input type="number" min="0" step="0.5" data-setv="stepDelay" value="${s.stepDelay}" style="width:90px"><span class="help" style="margin:0">segundos</span></div></div>
         <h3 class="sec2">Barra de respuestas (abajo del chat)</h3>
         ${sw('showBar', 'Mostrar la barra de respuestas')}
+        <div class="pref"><span class="grow">Ubicación de la barra</span><div class="seg"><button data-barpos="below" class="${s.barPosition !== 'above' ? 'on' : ''}">Debajo de la caja</button><button data-barpos="above" class="${s.barPosition === 'above' ? 'on' : ''}">Encima</button></div></div>
         ${sw('directSend', 'Mensaje sale directo')}
         ${sw('directSequence', 'Secuencia sale directo')}
         <div class="pref"><span class="grow">Estilo de los chips</span><div class="seg"><button data-chip="icon" class="${s.chipStyle === 'icon' ? 'on' : ''}">Ícono</button><button data-chip="color" class="${s.chipStyle === 'color' ? 'on' : ''}">Color</button></div></div>
@@ -413,12 +414,13 @@
   };
   body.addEventListener('click', async (e) => {
     if (app.view !== 'tools') return;
-    const t = e.target.closest('[data-set],[data-chip],[data-mode]');
+    const t = e.target.closest('[data-set],[data-chip],[data-mode],[data-barpos]');
     if (!t) return;
     const s = S().settings;
     if (t.dataset.set) return app.saveSettings({ [t.dataset.set]: !s[t.dataset.set] });
     if (t.dataset.chip) return app.saveSettings({ chipStyle: t.dataset.chip });
     if (t.dataset.mode) return app.saveSettings({ sendMode: t.dataset.mode });
+    if (t.dataset.barpos) return app.saveSettings({ barPosition: t.dataset.barpos });
   });
   body.addEventListener('change', async (e) => {
     const t = e.target;
