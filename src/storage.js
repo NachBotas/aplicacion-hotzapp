@@ -132,6 +132,17 @@
   };
   HZ.deleteMedia = (id) => chrome.storage.local.remove('media:' + id);
 
+  // Deja el data URL como "data:tipo/sub;base64,..." (sin parámetros como
+  // "; codecs=opus"): WhatsApp/WA-JS rechaza los que tienen espacios o parámetros
+  // con el error "invalid_data_url".
+  HZ.cleanDataUrl = (dataUrl, mime) => {
+    const s = String(dataUrl || '');
+    const i = s.indexOf(';base64,');
+    if (!s.startsWith('data:') || i < 0) return s;
+    const base = String(mime || s.slice(5, i)).split(';')[0].trim().toLowerCase() || 'application/octet-stream';
+    return 'data:' + base + ';base64,' + s.slice(i + 8);
+  };
+
   HZ.dataUrlToFile = async (dataUrl, name, mime) => {
     const blob = await (await fetch(dataUrl)).blob();
     return new File([blob], name || 'archivo', { type: mime || blob.type });

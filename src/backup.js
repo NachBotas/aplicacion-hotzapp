@@ -237,7 +237,7 @@ porque Whazaa los busca por su ruta.
       const info = manifest.media[id];
       const bytes = entries.get(prefix + info.path);
       if (!bytes) { missing++; continue; }
-      const dataUrl = await blobToDataUrl(new Blob([bytes], { type: info.mime || 'application/octet-stream' }));
+      const dataUrl = HZ.cleanDataUrl(await blobToDataUrl(new Blob([bytes], { type: String(info.mime || 'application/octet-stream').split(';')[0].trim() })));
       mediaObjs['media:' + id] = { id, name: info.name, mime: info.mime, size: bytes.length, dataUrl };
       app.status(`📥 Cargando archivos… ${i + 1}/${ids.length}`, '', (i + 1) / Math.max(1, ids.length));
     }

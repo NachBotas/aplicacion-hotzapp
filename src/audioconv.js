@@ -162,7 +162,10 @@
   // Devuelve { dataUrl, mime, name, size, duration, converted }
   HZ.toVoiceFormat = async (m) => {
     const bytes = new Uint8Array(await (await fetch(m.dataUrl)).arrayBuffer());
-    if (isOggOpus(bytes)) return { ...m, mime: OGG_MIME, converted: false };
+    if (isOggOpus(bytes)) {
+      const clean = HZ.cleanDataUrl(m.dataUrl, 'audio/ogg');
+      return { ...m, dataUrl: clean, mime: OGG_MIME, converted: clean !== m.dataUrl };
+    }
     let dec;
     try {
       dec = await decodeToMono48k(bytes);

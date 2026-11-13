@@ -164,7 +164,7 @@
         const o = { type: 'audio', isPtt: voice, filename: m.name, mimetype: 'audio/ogg; codecs=opus' };
         if (voice) o.waveform = true;
         if (r.viewOnce) o.isViewOnce = true;
-        await api.call('sendFile', id, m.dataUrl, o);
+        await api.call('sendFile', id, HZ.cleanDataUrl(m.dataUrl, 'audio/ogg'), o);
         break;
       }
       case 'image':
@@ -177,7 +177,7 @@
         const cap = fill(r.caption || '');
         if (cap.trim()) o.caption = cap;
         if (r.type !== 'document' && r.viewOnce) o.isViewOnce = true;
-        await api.call('sendFile', id, m.dataUrl, o);
+        await api.call('sendFile', id, HZ.cleanDataUrl(m.dataUrl, m.mime), o);
         break;
       }
       case 'contact':
