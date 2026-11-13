@@ -239,6 +239,16 @@ h3.sec2 { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; colo
 .spin { width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgba(252,165,165,.35); border-top-color: #fca5a5; animation: hzspin .8s linear infinite; }
 @keyframes hzspin { to { transform: rotate(360deg); } }
 .seqi.wait { background: transparent; border: 1px dashed var(--line2); }
+.seqm { background: var(--bg2); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+.seqm-h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.seqm-h .n { flex: 1; min-width: 0; }
+.seqm .preview { background: var(--bg); }
+.seqm .drop { padding: 14px; }
+.seqm .big { padding: 10px 6px; }
+.seqm .chips .vchip { font-size: 11px; padding: 2px 8px; }
+.addtypes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.addtype { display: flex; align-items: center; gap: 8px; justify-content: center; border: 1px solid var(--line2); background: transparent; border-radius: 9px; padding: 9px 6px; cursor: pointer; font-weight: 600; color: var(--fg); }
+.addtype:hover { background: var(--bg2); border-color: var(--muted2); }
 .seqbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .wtags { display: inline-flex; gap: 4px; }
 

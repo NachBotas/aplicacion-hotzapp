@@ -157,6 +157,12 @@ porque HotZapp los busca por su ruta.
         else data[k] = v;
       }
       const withMedia = (data.replies || []).filter((r) => r.mediaId && media[r.mediaId]);
+      for (const r of data.replies || []) {
+        if (r.type !== 'sequence') continue;
+        (r.items || []).forEach((it, n) => {
+          if (it.type === 'msg' && it.msg && it.msg.mediaId && media[it.msg.mediaId]) withMedia.push({ mediaId: it.msg.mediaId, type: it.msg.type, name: `${r.name} - paso ${n + 1}` });
+        });
+      }
       const files = [];
       const index = {};
       const used = new Set();

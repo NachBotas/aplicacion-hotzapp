@@ -109,6 +109,7 @@
     if (r.type === 'sequence') {
       return HZ.seqItems(r).map((it) => {
         if (it.type === 'wait') return `⏱ ${it.secs} s`;
+        if (it.type === 'msg') return it.msg.type === 'text' ? '“' + String(it.msg.text || '').slice(0, 30) + '”' : HZ.TYPES[it.msg.type].label;
         const c = app.state.replies.find((x) => x.id === it.replyId);
         return c ? c.name : '(borrada)';
       }).join(' → ');
@@ -119,7 +120,7 @@
   app.seqDuration = (r) =>
     HZ.seqItems(r).reduce((a, it) => {
       if (it.type === 'wait') return a + (Number(it.secs) || 0);
-      const c = app.state.replies.find((x) => x.id === it.replyId);
+      const c = it.type === 'msg' ? it.msg : app.state.replies.find((x) => x.id === it.replyId);
       if (!c) return a;
       if (c.type === 'text') return a + (Number(c.typing) || 0);
       if (c.type === 'audio' && c.asVoice !== false) return a + (c.recReal ? 0 : Number(c.recSecs ?? 3));

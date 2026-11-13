@@ -31,7 +31,7 @@
       <div class="mb"><div class="types">
         ${['text', 'audio', 'image', 'video', 'document', 'contact'].map(t).join('')}
         <button class="tbtn seq" data-type="sequence"><span style="color:${HZ.TYPES.sequence.color}">${I('layers', 22)}</span>
-          <span>Secuencia de mensajes<small>Varias respuestas rápidas, una tras otra.</small></span></button>
+          <span>Secuencia de mensajes<small>Armá varios mensajes (texto, audio, imagen…) en uno solo, con esperas entre medio.</small></span></button>
       </div></div>
       <div class="mf"><button class="btn gray" data-x="cancel">Cancelar</button></div>`);
     modal.addEventListener('click', (e) => {
@@ -51,7 +51,10 @@
       ? structuredClone(reply)
       : { id: null, type, name: '', category: '', shortcut: '', favorite: false, uses: 0, text: '', caption: '', viewOnce: false, asVoice: true, typing: 0, contactName: '', contactPhone: '', items: [], afterStage: '', recSecs: 3, recReal: false };
     if (draft.mediaId) draft._media = await HZ.getMedia(draft.mediaId);
-    if (draft.type === 'sequence') draft.items = HZ.seqItems(draft);
+    if (draft.type === 'sequence') {
+      draft.items = HZ.seqItems(draft).map((it) => (it.type === 'msg' ? { type: 'msg', msg: { ...it.msg } } : it));
+      for (const it of draft.items) if (it.type === 'msg' && it.msg.mediaId) it.msg._media = await HZ.getMedia(it.msg.mediaId);
+    }
     if (draft.type === 'audio' && draft.recSecs === undefined) draft.recSecs = 3;
     if (draft.type === 'audio' && draft._media) setTimeout(loadDur, 0);
     modal = app.modal('<div class="mb"></div>', { onClose: stopRec });
@@ -65,40 +68,81 @@
     if (d.type === 'text' && !d.text.trim()) n++;
     if (['audio', 'image', 'video', 'document'].includes(d.type) && !d._media) n++;
     if (d.type === 'contact') { if (!d.contactName.trim()) n++; if (!d.contactPhone.trim()) n++; }
-    if (d.type === 'sequence' && !d.items.some((it) => it.type === 'reply')) n++;
+    if (d.type === 'sequence') {
+      if (!d.items.some((it) => it.type !== 'wait')) n++;
+      for (const it of d.items) if (it.type === 'msg') n += msgMissing(it.msg);
+    }
     return n;
   }
 
+  function msgMissing(m) {
+    if (m.type === 'text') return String(m.text || '').trim() ? 0 : 1;
+    if (m.type === 'contact') return (String(m.contactName || '').trim() ? 0 : 1) + (String(m.contactPhone || '').trim() ? 0 : 1);
+    return m._media ? 0 : 1;
+  }
+
+  // objetivo de una acción: el borrador principal o un paso propio de la secuencia
+  const tgt = (i) => (i === undefined || i === null || i === '' ? draft : draft.items[+i].msg);
+  const ia = (i) => (i === undefined || i === null || i === '' ? '' : ` data-i="${i}"`);
+
   const sw = (key, label, help = '') =>
     `<div class="sw ${draft[key] ? 'on' : ''}" data-sw="${key}"><span class="tr"></span><span>${label}</span></div>${help ? `<div class="help" style="margin:0 0 8px">${help}</div>` : ''}`;
-  const chips = (target) => `<div class="chips">${HZ.VARS.map((v) => `<button type="button" class="vchip" data-var="${v.token}" data-target="${target}">${v.label}</button>`).join('')}</div>
+  const chips = (target, small) => small ? `<div class="chips">${HZ.VARS.map((v) => `<button type="button" class="vchip" data-var="${v.token}" data-target="${target}">${v.label}</button>`).join('')}</div>` : `<div class="chips">${HZ.VARS.map((v) => `<button type="button" class="vchip" data-var="${v.token}" data-target="${target}">${v.label}</button>`).join('')}</div>
     <div class="help">Haz clic para agregar. Al enviar, se cambia por el dato real.</div>`;
   const shortcutField = () => `<div class="field"><label>Atajo</label><div class="short"><input data-k="shortcut" value="${esc(draft.shortcut)}" placeholder="atajo"></div></div>`;
   const more = (label, inner) => `
     <div class="more ${moreOpen ? 'open' : ''}" data-more>${I('chevronDown', 14)} Más opciones <span class="opt">(${label})</span></div>
     <div ${moreOpen ? '' : 'hidden'} data-morebody>${inner}</div>`;
 
-  function mediaBlock() {
-    const d = draft;
+  function mediaBlock(i) {
+    const d = tgt(i);
     const m = d._media;
+    const A = ia(i);
+    const recHere = rec && String(rec.i ?? '') === String(i ?? '');
     if (m) {
       const pv =
         d.type === 'image' ? `<img src="${m.dataUrl}" alt="">` :
         d.type === 'video' ? `<video src="${m.dataUrl}" controls></video>` :
         d.type === 'audio' ? `<audio src="${m.dataUrl}" controls></audio>` :
         `<span style="color:${HZ.TYPES.document.color}">${I('file', 28)}</span><span class="grow">${esc(m.name)}<div class="help">${(m.size / 1024 / 1024 || 0).toFixed(2)} MB</div></span>`;
-      return `<div class="preview">${pv}<button type="button" class="btn sm ghost" data-x="clearmedia">Cambiar</button></div>`;
+      return `<div class="preview">${pv}<button type="button" class="btn sm ghost" data-x="clearmedia"${A}>Cambiar</button></div>`;
     }
     if (d.type === 'audio') {
       return `<div class="two">
-        <button type="button" class="big ${rec ? 'rec' : ''}" data-x="rec">${I(rec ? 'stop' : 'mic', 20)}${rec ? 'Detener grabación' : 'Grabar ahora'}${rec ? '<small>● grabando…</small>' : ''}</button>
-        <button type="button" class="big" data-x="file">${I('file', 20)}Elegir archivo<small>${ACCEPT.audio.hint}</small></button>
-      </div><input type="file" hidden accept="${ACCEPT.audio.accept}" data-file>
-      <div class="help">Se guarda una copia dentro de HotZapp y entra en tu <b>Copia de seguridad</b>.</div>`;
+        <button type="button" class="big ${recHere ? 'rec' : ''}" data-x="rec"${A}>${I(recHere ? 'stop' : 'mic', 20)}${recHere ? 'Detener grabación' : 'Grabar ahora'}${recHere ? '<small>● grabando…</small>' : ''}</button>
+        <button type="button" class="big" data-x="file"${A}>${I('file', 20)}Elegir archivo<small>${ACCEPT.audio.hint}</small></button>
+      </div><input type="file" hidden accept="${ACCEPT.audio.accept}" data-file${A}>
+      ${A ? '' : '<div class="help">Se guarda una copia dentro de HotZapp y entra en tu <b>Copia de seguridad</b>.</div>'}`;
     }
-    return `<div class="drop" data-drop>Haz clic aquí o arrastra el archivo.<small>${ACCEPT[d.type].hint}</small></div>
-      <div class="help">Se guarda una copia dentro de HotZapp y entra en tu <b>Copia de seguridad</b>. Te recomendamos tener los originales juntos en una carpeta.</div>
-      <input type="file" hidden accept="${ACCEPT[d.type].accept}" data-file>`;
+    return `<div class="drop" data-drop${A}>Haz clic aquí o arrastra el archivo.<small>${ACCEPT[d.type].hint}</small></div>
+      ${A ? '' : '<div class="help">Se guarda una copia dentro de HotZapp y entra en tu <b>Copia de seguridad</b>. Te recomendamos tener los originales juntos en una carpeta.</div>'}
+      <input type="file" hidden accept="${ACCEPT[d.type].accept}" data-file${A}>`;
+  }
+
+  function msgCard(m, i, ctl) {
+    const T = HZ.TYPES[m.type];
+    const A = ` data-i="${i}"`;
+    const isw = (k, label, on) => `<div class="sw ${on ? 'on' : ''}" data-isw="${k}"${A} style="margin:6px 0"><span class="tr"></span><span>${label}</span></div>`;
+    let body = '';
+    if (m.type === 'text') {
+      body = `<textarea data-ik="text"${A} style="min-height:64px" placeholder="Escribí el mensaje…">${esc(m.text || '')}</textarea>${chips(i + ':text', true)}
+        <div class="row" style="margin-top:6px"><span class="help" style="margin:0">✍️ “escribiendo…”</span><input type="number" min="0" max="60" data-ik="typing"${A} value="${Number(m.typing) || 0}" style="width:64px;padding:4px 6px"><span class="help" style="margin:0">s</span></div>`;
+    } else if (m.type === 'contact') {
+      body = `<div class="two"><input data-ik="contactName"${A} value="${esc(m.contactName || '')}" placeholder="Nombre del contacto"><input data-ik="contactPhone"${A} value="${esc(m.contactPhone || '')}" placeholder="Teléfono"></div>`;
+    } else {
+      body = mediaBlock(i);
+      if (m.type === 'audio') {
+        body += isw('asVoice', 'Como nota de voz (grabado al momento)', m.asVoice !== false);
+        if (m.asVoice !== false) body += `<div class="row"><span class="help" style="margin:0">🎤 “grabando audio…”</span>
+          <input type="number" min="0" max="600" data-ik="recSecs"${A} value="${m.recReal ? '' : (m.recSecs ?? 3)}" ${m.recReal ? 'disabled' : ''} style="width:64px;padding:4px 6px"><span class="help" style="margin:0">s</span>
+          <span class="grow"></span>${isw('recReal', 'lo que dura el audio', !!m.recReal)}</div>`;
+      } else {
+        body += `<textarea data-ik="caption"${A} style="min-height:44px;margin-top:8px" placeholder="Texto que acompaña (opcional)">${esc(m.caption || '')}</textarea>${chips(i + ':caption', true)}`;
+        if (m.type !== 'document') body += isw('viewOnce', 'Ver una sola vez', !!m.viewOnce);
+      }
+    }
+    return `<div class="seqm"><div class="seqm-h"><span class="ticon" style="background:${T.color}22;color:${T.color}">${I(T.icon, 14)}</span>
+      <span class="n"><b>${T.label}</b>${msgMissing(m) ? ' <span class="req" style="font-size:11px">· falta completar</span>' : ''}</span>${ctl}</div>${body}</div>`;
   }
 
   function seqBlock() {
@@ -114,16 +158,19 @@
           return `<div class="seqi wait"><span class="ticon" style="background:#8d959922;color:#c0c6c9">${I('clock', 14)}</span><span class="n">Esperar</span>
             <input type="number" min="0" step="1" data-wsecs="${i}" value="${it.secs}"><span class="help" style="margin:0">segundos</span>${ctl}</div>`;
         }
+        if (it.type === 'msg') return msgCard(it.msg, i, ctl);
         const r = app.state.replies.find((x) => x.id === it.replyId);
         const sim = r && r.type === 'audio' && r.asVoice !== false ? ` · 🎤 ${r.recReal ? 'duración del audio' : (r.recSecs ?? 3) + ' s'}` : r && r.type === 'text' && r.typing ? ` · ✍️ ${r.typing} s` : '';
         return `<div class="seqi">${r ? app.typeIcon(r.type, 14) : ''}<span class="n">${esc(r ? r.name : '(borrada)')}<span class="help" style="margin:0">${sim}</span></span>${ctl}</div>`;
       }).join('')}
-      <div class="seqbtns">
-        <div class="addseq" data-x="addseq">+ Agregar respuesta rápida</div>
+      <div class="lbl" style="margin:12px 0 6px">Agregar un mensaje nuevo</div>
+      <div class="addtypes">${['text', 'audio', 'image', 'video', 'document', 'contact'].map((k) => `<button type="button" class="addtype" data-addmsg="${k}"><span style="color:${HZ.TYPES[k].color}">${I(HZ.TYPES[k].icon, 16)}</span>${HZ.TYPES[k].label}</button>`).join('')}</div>
+      <div class="seqbtns" style="margin-top:8px">
         <div class="addseq" data-x="addwait" style="color:var(--fg)">⏱ Agregar temporizador</div>
+        <div class="addseq" data-x="addseq">+ Usar una respuesta guardada</div>
       </div>
       ${pickerOpen ? `<div class="picker scroll">${avail.length ? avail.map((r) => `<div class="pi" data-addid="${r.id}">${app.typeIcon(r.type, 14)}<span class="grow">${esc(r.name)}</span></div>`).join('') : '<div class="empty">Primero creá respuestas de texto, audio, imagen, etc.</div>'}</div>` : ''}
-      <div class="help">Elegí las respuestas que van a salir, en orden, y poné temporizadores entre medio para que parezca más natural. Los “escribiendo…” y “grabando audio…” de cada respuesta también se respetan.</div>
+      <div class="help">Armá la secuencia completa acá: cada mensaje se crea y edita en el mismo lugar. Poné temporizadores entre medio para que parezca más natural. También podés sumar respuestas que ya tenías guardadas.</div>
       <div class="kv" style="margin-top:12px"><b>Después de disparar</b><div class="v">
         <select data-k="afterStage"><option value="">Nada. La conversación se queda donde está.</option>
           ${app.state.stages.map((s) => `<option value="${s.id}" ${d.afterStage === s.id ? 'selected' : ''}>Mover a “${esc(s.name)}”</option>`).join('')}</select>
@@ -216,24 +263,26 @@
   }
 
   // ---------- archivos ----------
-  async function setFile(f) {
+  async function setFile(f, i) {
     if (!f) return;
     if (f.size > MAX) return app.toast('El archivo es muy grande (máx. 64 MB).');
-    draft._media = { name: f.name, mime: f.type || 'application/octet-stream', size: f.size, dataUrl: await HZ.fileToDataUrl(f), _new: true };
-    if (!draft.name) draft.name = f.name.replace(/\.[^.]+$/, '');
-    draft._dur = 0;
+    const d = tgt(i);
+    d._media = { name: f.name, mime: f.type || 'application/octet-stream', size: f.size, dataUrl: await HZ.fileToDataUrl(f), _new: true };
+    if (d === draft && !draft.name) draft.name = f.name.replace(/\.[^.]+$/, '');
+    d._dur = 0;
     draw();
-    if (draft.type === 'audio') loadDur();
+    if (d.type === 'audio') loadDur(i);
   }
 
-  async function loadDur() {
-    const d = draft;
+  async function loadDur(i) {
+    const owner = draft;
+    const d = owner && tgt(i);
     if (!d || !d._media || !HZ.audioDuration) return;
     const dur = await HZ.audioDuration({ id: 'draft-' + d._media.dataUrl.length + '-' + (d._media.size || 0), dataUrl: d._media.dataUrl });
-    if (draft === d && dur) { d._dur = dur; draw(); }
+    if (draft === owner && dur) { d._dur = dur; draw(); }
   }
 
-  async function toggleRec() {
+  async function toggleRec(i) {
     if (rec) { rec.mr.stop(); return; }
     let stream;
     try {
@@ -251,12 +300,13 @@
       rec = null;
       if (!wasActive || !draft) return;
       const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
-      draft._media = { name: 'grabacion.' + (blob.type.includes('ogg') ? 'ogg' : 'webm'), mime: blob.type, size: blob.size, dataUrl: await HZ.fileToDataUrl(blob), _new: true };
-      draft._dur = 0;
+      const d = tgt(i);
+      d._media = { name: 'grabacion.' + (blob.type.includes('ogg') ? 'ogg' : 'webm'), mime: blob.type, size: blob.size, dataUrl: await HZ.fileToDataUrl(blob), _new: true };
+      d._dur = 0;
       draw();
-      loadDur();
+      loadDur(i);
     };
-    rec = { mr };
+    rec = { mr, i };
     mr.start();
     draw();
   }
@@ -283,6 +333,25 @@
       if (old && old.mediaId) await HZ.deleteMedia(old.mediaId);
     }
     if (!['audio', 'image', 'video', 'document'].includes(clean.type)) delete clean.mediaId;
+    if (clean.type === 'sequence') {
+      const keep = new Set();
+      const items = [];
+      for (const it of d.items) {
+        if (it.type !== 'msg') { items.push(it); continue; }
+        const { _media: mm, _dur: _x, ...msg } = it.msg;
+        if (mm && mm._new) {
+          const { _new, ...m } = mm;
+          msg.mediaId = (await HZ.saveMedia({ ...m, id: undefined })).id;
+        }
+        if (!['audio', 'image', 'video', 'document'].includes(msg.type)) delete msg.mediaId;
+        if (msg.mediaId) keep.add(msg.mediaId);
+        msg.typing = Number(msg.typing) || 0;
+        if (msg.type === 'audio') msg.recSecs = Math.max(0, Number(msg.recSecs ?? 3));
+        items.push({ type: 'msg', msg });
+      }
+      clean.items = items;
+      for (const it of (old && old.items) || []) if (it.type === 'msg' && it.msg && it.msg.mediaId && !keep.has(it.msg.mediaId)) await HZ.deleteMedia(it.msg.mediaId);
+    }
     let replies;
     if (clean.id) replies = app.state.replies.map((r) => (r.id === clean.id ? clean : r));
     else {
@@ -299,6 +368,7 @@
     const r = app.state.replies.find((x) => x.id === id);
     if (!r || !confirm(`¿Eliminar “${r.name}”?`)) return false;
     if (r.mediaId) await HZ.deleteMedia(r.mediaId);
+    for (const it of r.items || []) if (it.type === 'msg' && it.msg && it.msg.mediaId) await HZ.deleteMedia(it.msg.mediaId);
     const replies = app.state.replies
       .filter((x) => x.id !== id)
       .map((x) => (x.type === 'sequence' ? { ...x, items: (x.items || []).filter((it) => it.replyId !== id) } : x));
@@ -314,17 +384,21 @@
     if (t.dataset.k) draft[t.dataset.k] = t.dataset.k === 'typing' ? Number(t.value) : t.value;
     if (t.dataset.wsecs !== undefined) draft.items[+t.dataset.wsecs].secs = Math.max(0, Number(t.value) || 0);
     if (t.dataset.k === 'recSecs') draft.recSecs = Math.max(0, Number(t.value) || 0);
+    if (t.dataset.ik && t.dataset.i !== undefined) {
+      const m = draft.items[+t.dataset.i].msg;
+      m[t.dataset.ik] = ['typing', 'recSecs'].includes(t.dataset.ik) ? Math.max(0, Number(t.value) || 0) : t.value;
+    }
     updateMissing();
   });
   ov.addEventListener('change', (e) => {
     if (!draft) return;
     const t = e.target;
     if (t.dataset.k === 'afterStage') draft.afterStage = t.value;
-    if (t.matches('[data-file]')) setFile(t.files[0]);
+    if (t.matches('[data-file]')) setFile(t.files[0], t.dataset.i);
   });
   ov.addEventListener('click', async (e) => {
     if (!draft || !modal || !modal.isConnected) return;
-    const t = e.target.closest('[data-x],[data-sw],[data-var],[data-more],[data-drop],[data-mv],[data-rmi],[data-addid]');
+    const t = e.target.closest('[data-x],[data-sw],[data-isw],[data-var],[data-more],[data-drop],[data-mv],[data-rmi],[data-addid],[data-addmsg]');
     if (!t) return;
     const d = draft;
     if (t.dataset.sw) {
@@ -333,24 +407,44 @@
       if (k === 'recReal' && d.recReal && d._media && !d._dur) loadDur();
       return draw();
     }
+    if (t.dataset.isw) {
+      const m = d.items[+t.dataset.i].msg;
+      const k = t.dataset.isw;
+      m[k] = k === 'asVoice' ? m.asVoice === false : !m[k];
+      if (k === 'recReal' && m.recReal && m._media && !m._dur) loadDur(t.dataset.i);
+      return draw();
+    }
+    if (t.dataset.addmsg) {
+      const k = t.dataset.addmsg;
+      d.items.push({ type: 'msg', msg: { type: k, text: '', caption: '', typing: 0, asVoice: true, recSecs: 3, recReal: false, viewOnce: false, contactName: '', contactPhone: '' } });
+      pickerOpen = false;
+      draw();
+      const cards = modal.querySelectorAll('.seqm');
+      const last = cards[cards.length - 1];
+      if (last) { last.scrollIntoView({ block: 'center' }); const f = last.querySelector('textarea,input'); if (f && k !== 'audio') f.focus(); }
+      return;
+    }
     if (t.dataset.var) {
-      const ta = modal.querySelector(`[data-k="${t.dataset.target}"]`);
+      const [ti, tf] = t.dataset.target.includes(':') ? t.dataset.target.split(':') : [null, t.dataset.target];
+      const ta = ti !== null ? modal.querySelector(`[data-ik="${tf}"][data-i="${ti}"]`) : modal.querySelector(`[data-k="${tf}"]`);
       const s = ta.selectionStart ?? ta.value.length;
       ta.value = ta.value.slice(0, s) + t.dataset.var + ta.value.slice(ta.selectionEnd ?? s);
-      d[t.dataset.target] = ta.value;
+      if (ti !== null) d.items[+ti].msg[tf] = ta.value;
+      else d[tf] = ta.value;
       ta.focus();
       ta.selectionStart = ta.selectionEnd = s + t.dataset.var.length;
       return updateMissing();
     }
     if (t.dataset.more !== undefined) { moreOpen = !moreOpen; return draw(); }
-    if (t.dataset.drop !== undefined) return modal.querySelector('[data-file]').click();
+    if (t.dataset.drop !== undefined) return fileInput(t.dataset.i).click();
     if (t.dataset.mv) {
       const [i, dir] = t.dataset.mv.split(':').map(Number);
       const j = i + dir;
+      stopRec();
       [d.items[i], d.items[j]] = [d.items[j], d.items[i]];
       return draw();
     }
-    if (t.dataset.rmi !== undefined) { d.items.splice(+t.dataset.rmi, 1); return draw(); }
+    if (t.dataset.rmi !== undefined) { stopRec(); d.items.splice(+t.dataset.rmi, 1); return draw(); }
     if (t.dataset.addid) {
       d.items.push({ type: 'reply', replyId: t.dataset.addid });
       pickerOpen = false;
@@ -361,9 +455,9 @@
       case 'back': stopRec(); return pick();
       case 'save': return save();
       case 'delete': if (await remove(d.id)) app.closeModal(); return;
-      case 'clearmedia': d._media = null; return draw();
-      case 'rec': return toggleRec();
-      case 'file': return modal.querySelector('[data-file]').click();
+      case 'clearmedia': tgt(t.dataset.i)._media = null; return draw();
+      case 'rec': return toggleRec(t.dataset.i);
+      case 'file': return fileInput(t.dataset.i).click();
       case 'addseq': pickerOpen = !pickerOpen; return draw();
       case 'addwait': d.items.push({ type: 'wait', secs: Number(app.state.settings.stepDelay) || 3 }); pickerOpen = false; return draw();
     }
@@ -377,8 +471,10 @@
     const z = e.target.closest && e.target.closest('[data-drop]');
     if (!z) return;
     e.preventDefault();
-    setFile(e.dataTransfer.files[0]);
+    setFile(e.dataTransfer.files[0], z.dataset.i);
   });
+
+  const fileInput = (i) => (i === undefined || i === '' ? modal.querySelector('[data-file]:not([data-i])') : modal.querySelector(`[data-file][data-i="${i}"]`));
 
   HZ.editor = { pick, open, remove };
 })();

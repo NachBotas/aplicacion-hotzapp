@@ -263,6 +263,10 @@
               if (it.secs > 0) await wait(job, it.secs * 1000, `⏱ ${r.name}`);
               continue;
             }
+            if (it.type === 'msg') {
+              await runStep(job, { ...it.msg, name: `${r.name} · ${HZ.TYPES[it.msg.type].label.toLowerCase()}` }, ctx, true);
+              continue;
+            }
             const child = app.state.replies.find((x) => x.id === it.replyId);
             if (!child || child.type === 'sequence') continue;
             await runStep(job, child, ctx, true);

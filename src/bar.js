@@ -11,7 +11,7 @@
   // ---------- barra ----------
   const barHost = document.createElement('div');
   barHost.id = 'hotzapp-bar';
-  barHost.style.cssText = 'flex:none;width:100%;min-width:0;max-width:100%;overflow:hidden;position:relative;z-index:5;';
+  barHost.style.cssText = 'flex:none;display:block;width:100%;min-width:0;max-width:100%;contain:inline-size;overflow:hidden;position:relative;z-index:5;';
   const broot = barHost.attachShadow({ mode: 'open' });
   broot.innerHTML = `<style>${HZ.PANEL_CSS}</style><div class="hz"><div class="cbar"></div></div>`;
   const bar = broot.querySelector('.cbar');
@@ -46,7 +46,7 @@
         const cls = ['chip', colored ? 'colored' : '', armed === r.id ? 'armed' : '', app.busyIds.has(r.id) ? 'busy' : ''].join(' ');
         const style = colored ? `style="background:${T.color}"` : '';
         const icon = colored ? '' : `<span style="color:${T.color}">${I(T.icon, 15)}</span>`;
-        const n = r.type === 'sequence' ? `<span class="n">${(r.items || []).length}</span>` : '';
+        const n = r.type === 'sequence' ? `<span class="n">${HZ.seqCount(r)}</span>` : '';
         return `<button class="${cls}" ${style} data-chip="${r.id}" title="${esc(app.preview(r)).slice(0, 200)}">${icon}${esc(r.name)}${n}</button>`;
       }).join('') : `<span style="color:var(--muted);font-size:12px;padding:4px">${S().replies.length ? 'Ninguna respuesta con estos filtros.' : 'Creá respuestas rápidas desde el panel ⚡'}</span>`}</div>
       <div class="jobs"></div>`;

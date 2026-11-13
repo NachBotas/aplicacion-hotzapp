@@ -178,6 +178,7 @@
     const out = [];
     (r.items || []).forEach((it, i) => {
       if (it.type === 'wait') out.push({ type: 'wait', secs: Number(it.secs) || 0 });
+      else if (it.type === 'msg') out.push({ type: 'msg', msg: it.msg || { type: 'text', text: '' } });
       else {
         if (i > 0 && Number(it.delay) > 0) out.push({ type: 'wait', secs: Number(it.delay) });
         out.push({ type: 'reply', replyId: it.replyId });
@@ -185,6 +186,9 @@
     });
     return out;
   };
+
+  // Cantidad de mensajes (sin contar temporizadores)
+  HZ.seqCount = (r) => HZ.seqItems(r).filter((it) => it.type !== 'wait').length;
 
   HZ.escape = (s) =>
     String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

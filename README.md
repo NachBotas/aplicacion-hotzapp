@@ -5,6 +5,7 @@ Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 - **Respuestas rápidas de 7 tipos**: texto, audio, imagen, video, documento, contacto y **secuencias** (varias respuestas una tras otra, con espera, que al terminar pueden mover el chat a una etapa del CRM).
 - **Audios como recién grabados, al instante**: llegan como nota de voz (con su onda). Antes de mandarlo, el otro ve "grabando audio…" durante los segundos que elijas (o lo que dura el audio). No hay que esperar: podés pasar a otro chat mientras sale.
 - **Varios chats a la vez y botón ⏹ para cancelar**: cada envío aparece abajo, a la derecha de la barra, con cuenta regresiva; tocá la ✕ para cancelarlo (o "Cancelar todo").
+- **Secuencias completas en un solo lugar**: dentro de la secuencia creás cada mensaje (texto, audio, imagen, video, documento o contacto) sin tener que crearlos antes por separado; también podés sumar respuestas ya guardadas.
 - **Temporizadores en las secuencias** ("⏱ Agregar temporizador") y "escribiendo…" configurable en los textos.
 - **Etiquetas en la lista de chats**: la etapa del CRM, las etiquetas de WhatsApp Business y el temporizador de espera, juntos al lado del nombre.
 - **Barra de chips debajo del chat** con filtro (solo favoritos, por tipo), estilo ícono/color, "Mensaje sale directo" y "Secuencia sale directo".

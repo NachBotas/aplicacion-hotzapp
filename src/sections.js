@@ -60,7 +60,7 @@
       const names = Object.keys(groups).sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)));
       const card = (r) => {
         const meta = r.type === 'sequence'
-          ? `${(r.items || []).length} mensajes · unos ${app.seqDuration(r)} s · usado ${r.uses || 0}×`
+          ? `${HZ.seqCount(r)} mensajes · unos ${app.seqDuration(r)} s · usado ${r.uses || 0}×`
           : `usado ${r.uses || 0}×`;
         return `<div class="rcard ${app.busyIds.has(r.id) ? 'busy' : ''}" data-send="${r.id}" draggable="true" data-drag="${r.id}" title="Clic para enviar al chat abierto">
           <span class="grip">${I('grip', 14)}</span>
