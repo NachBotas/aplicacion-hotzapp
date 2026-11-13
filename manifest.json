@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HotZapp – Respuestas rápidas para WhatsApp Web",
   "short_name": "HotZapp",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Respuestas rápidas (texto, audio como nota de voz, imagen, video, documento, contacto y secuencias), CRM, pendientes, notas y mensajes programados para WhatsApp Web.",
   "icons": {
     "16": "icons/icon16.png",
@@ -52,6 +52,7 @@
         "src/editor.js",
         "src/sections.js",
         "src/bar.js",
+        "src/backup.js",
         "src/content.js"
       ],
       "run_at": "document_idle"

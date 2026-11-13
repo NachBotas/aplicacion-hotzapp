@@ -31,6 +31,7 @@
         <div class="sec">Herramientas</div>
         ${mi('replies', 'bolt', 'Respuestas rápidas')}
         ${mi('tools', 'wrench', 'Herramientas')}
+        ${mi('backup', 'archive', 'Copia de seguridad', !S().settings.lastBackup || Date.now() - S().settings.lastBackup > 14 * 86400000 ? '!' : 0, true)}
       </div>`;
     }
   };
@@ -390,29 +391,19 @@
         ${sw('showDots', 'Puntos de color del CRM en la lista de chats')}
         <div class="field"><label>Ancho del panel (px)</label><input type="number" min="280" max="600" data-setv="panelWidth" value="${s.panelWidth}"></div>
         <h3 class="sec2">Copia de seguridad</h3>
-        <p class="hint">Exporta todo (respuestas, audios, imágenes, CRM, notas, agenda) para pasarlo a otra computadora.</p>
-        <div class="row"><button class="btn ghost grow" data-export>${I('upload', 15, 'style="transform:rotate(180deg)"')} Exportar</button>
-          <button class="btn ghost grow" data-import>${I('upload', 15)} Importar</button><input type="file" accept=".json" hidden data-importfile></div>
+        <p class="hint">Exportá todo (respuestas, audios, imágenes, videos, documentos, CRM, notas y agenda) en un .zip para pasarlo a otra computadora.</p>
+        <button class="btn ghost" style="width:100%" data-open="backup">${I('archive', 15)} Ir a Copia de seguridad</button>
         <h3 class="sec2">Uso responsable</h3>
         <p class="hint">No uses HotZapp para spam ni envíos masivos a gente que no te escribió: WhatsApp puede restringir números con muchos reportes.</p>`;
     }
   };
   body.addEventListener('click', async (e) => {
     if (app.view !== 'tools') return;
-    const t = e.target.closest('[data-set],[data-chip],[data-export],[data-import]');
+    const t = e.target.closest('[data-set],[data-chip]');
     if (!t) return;
     const s = S().settings;
     if (t.dataset.set) return app.saveSettings({ [t.dataset.set]: !s[t.dataset.set] });
     if (t.dataset.chip) return app.saveSettings({ chipStyle: t.dataset.chip });
-    if (t.dataset.export !== undefined) {
-      const all = await chrome.storage.local.get(null);
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify({ app: 'hotzapp', version: 2, data: all })], { type: 'application/json' }));
-      a.download = `hotzapp-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      return;
-    }
-    if (t.dataset.import !== undefined) body.querySelector('[data-importfile]').click();
   });
   body.addEventListener('change', async (e) => {
     const t = e.target;
@@ -423,18 +414,6 @@
       if (k === 'panelWidth') v = Math.min(600, Math.max(280, Number(v) || 340));
       await app.saveSettings({ [k]: k === 'myName' ? v.trim() : v });
       app.status('Guardado ✓', 'ok');
-    }
-    if (t.matches('[data-importfile]') && t.files[0]) {
-      try {
-        const json = JSON.parse(await t.files[0].text());
-        if (json.app !== 'hotzapp' || !json.data) throw new Error('No es un backup de HotZapp');
-        if (!confirm('Esto reemplaza todos tus datos actuales de HotZapp. ¿Continuar?')) return;
-        await chrome.storage.local.clear();
-        await chrome.storage.local.set(json.data);
-        app.status('Backup importado ✅', 'ok');
-      } catch (err) {
-        app.status('No se pudo importar: ' + err.message, 'err');
-      }
     }
   });
 

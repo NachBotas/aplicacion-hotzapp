@@ -9,7 +9,8 @@ Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 - Categorías, favoritos, contador de usos y orden con arrastrar y soltar.
 - Variables: Primer nombre, Nombre completo, Saludo, Tu nombre, Teléfono, Fecha de hoy y Hora actual.
 - Opciones: "Ver una sola vez" (imagen, video, audio) y "Simular escribiendo…" (texto).
-- **Menú HotZapp**: Pendientes (con aviso), Agenda (mensajes programados), CRM (tablero Kanban), Datos del lead, Notas y Herramientas (preferencias y copia de seguridad).
+- **Menú HotZapp**: Pendientes (con aviso), Agenda (mensajes programados), CRM (tablero Kanban), Datos del lead, Notas, Herramientas y Copia de seguridad.
+- **Copia de seguridad en .zip** con todo: configuración, respuestas, CRM, notas, agenda y los audios, imágenes, videos y documentos en carpetas. Se carga en otra computadora con *Reemplazar todo* o *Combinar*.
 
 ## Instalación (modo desarrollador)
 
@@ -31,6 +32,7 @@ En WhatsApp Web vas a ver una barrita a la izquierda del chat (☰ menú, ⚡ re
 | Etiquetar un lead | ☰ → Datos del lead → Etapa del CRM, o arrastralo en el tablero CRM |
 | Programar un mensaje | ☰ → Agenda |
 | Recordar un seguimiento | ☰ → Pendientes |
+| Pasar todo a otra compu | ☰ → Copia de seguridad → **Crear backup**; en la otra compu → **Reemplazar todo** y elegí el .zip |
 
 ## Cosas a tener en cuenta
 
@@ -40,6 +42,7 @@ En WhatsApp Web vas a ver una barrita a la izquierda del chat (☰ menú, ⚡ re
 - Si un audio no arranca, hacé un clic cualquiera en WhatsApp Web y reintentá (Chrome a veces bloquea el audio hasta que interactuás con la página).
 - WhatsApp cambia su página seguido. Si algo deja de andar después de una actualización, los selectores están todos en `src/wa.js`.
 - **"Ver una sola vez"** y la **tarjeta de contacto** dependen de botones de WhatsApp que cambian seguido: si no se encuentran, la imagen/audio no se envía (para no mandarlo permanente por error) y el contacto se manda como texto con el número y un link wa.me.
+- **Tus archivos** se copian dentro de la extensión (aunque borres el original, la respuesta sigue andando), pero se pierden si desinstalás HotZapp o borrás los datos de Chrome: hacé backups seguido y guardá los originales juntos en una carpeta.
 - **Uso responsable**: no la uses para spam ni envíos masivos. WhatsApp puede restringir números con muchos reportes. HotZapp no está afiliada a WhatsApp ni a Meta.
 
 ## Estructura
@@ -55,6 +58,7 @@ src/core.js           Estado, panel, barrita lateral y motor de envío
 src/editor.js         Editor de respuestas (7 tipos)
 src/sections.js       Menú, Respuestas, Pendientes, Agenda, Datos del lead, Notas, Herramientas y CRM
 src/bar.js            Barra de chips debajo del chat y atajo ";"
+src/backup.js         Copia de seguridad en .zip (exportar / importar)
 src/content.js        Arranque: agenda, avisos de pendientes y puntos de color del CRM
 src/panel-style.js    Estilos (tema oscuro)
 options/options.html  Página de bienvenida
