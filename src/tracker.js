@@ -330,33 +330,6 @@
     }
   }
 
-  // Etiqueta roja "⏱ 25 min" al lado del nombre en la lista de chats
-  function paintWaits() {
-    const pane = document.querySelector('#pane-side');
-    if (!pane) return;
-    const s = app.state.settings;
-    const limit = (Number(s.waitMinutes) || 15) * MIN;
-    const map = Object.fromEntries(waiting().filter((w) => w.wait >= limit).map((w) => [w.name, w]));
-    pane.querySelectorAll('.hz-wait').forEach((el) => {
-      const span = el.parentElement && el.parentElement.querySelector('span[title]');
-      if (!s.waitAlert || !span || !map[span.getAttribute('title')]) el.remove();
-    });
-    if (!s.waitAlert) return;
-    pane.querySelectorAll('span[title]').forEach((span) => {
-      const w = map[span.getAttribute('title')];
-      if (!w) return;
-      let el = span.parentElement.querySelector('.hz-wait');
-      if (!el) {
-        el = document.createElement('span');
-        el.className = 'hz-wait';
-        el.style.cssText = 'display:inline-block;margin-left:6px;padding:0 6px;border-radius:8px;background:#f05252;color:#fff;font-size:11px;font-weight:700;line-height:16px;vertical-align:middle;white-space:nowrap';
-        span.parentElement.insertBefore(el, span.nextSibling);
-      }
-      const txt = '⏱ ' + HZ.fmtDur(w.wait);
-      if (el.textContent !== txt) el.textContent = txt;
-    });
-  }
-
   HZ.tracker = { compute, waiting, parsePre, parseListLabel, get data() { return track; }, flush };
 
   app.afterBoot = app.afterBoot || [];
@@ -368,8 +341,8 @@
     tick();
     setInterval(tick, 2500);
     setInterval(flush, 5000);
-    setInterval(() => { checkWaiting(); paintWaits(); app.renderRail(); }, 20000);
-    setTimeout(() => { checkWaiting(); paintWaits(); app.renderRail(); }, 4000);
+    setInterval(() => { checkWaiting(); app.renderRail(); }, 20000);
+    setTimeout(() => { checkWaiting(); app.renderRail(); }, 4000);
     window.addEventListener('beforeunload', () => { if (dirty) flush(); });
   });
 })();

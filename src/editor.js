@@ -49,8 +49,11 @@
     pickerOpen = false;
     draft = reply
       ? structuredClone(reply)
-      : { id: null, type, name: '', category: '', shortcut: '', favorite: false, uses: 0, text: '', caption: '', viewOnce: false, asVoice: true, typing: 0, contactName: '', contactPhone: '', items: [], afterStage: '' };
+      : { id: null, type, name: '', category: '', shortcut: '', favorite: false, uses: 0, text: '', caption: '', viewOnce: false, asVoice: true, typing: 0, contactName: '', contactPhone: '', items: [], afterStage: '', recSecs: 3, recReal: false };
     if (draft.mediaId) draft._media = await HZ.getMedia(draft.mediaId);
+    if (draft.type === 'sequence') draft.items = HZ.seqItems(draft);
+    if (draft.type === 'audio' && draft.recSecs === undefined) draft.recSecs = 3;
+    if (draft.type === 'audio' && draft._media) setTimeout(loadDur, 0);
     modal = app.modal('<div class="mb"></div>', { onClose: stopRec });
     draw();
   }
@@ -62,7 +65,7 @@
     if (d.type === 'text' && !d.text.trim()) n++;
     if (['audio', 'image', 'video', 'document'].includes(d.type) && !d._media) n++;
     if (d.type === 'contact') { if (!d.contactName.trim()) n++; if (!d.contactPhone.trim()) n++; }
-    if (d.type === 'sequence' && !d.items.length) n++;
+    if (d.type === 'sequence' && !d.items.some((it) => it.type === 'reply')) n++;
     return n;
   }
 
@@ -104,16 +107,23 @@
     return `
       <div class="lbl">Mensajes, en orden <span class="opt">· salen una tras otra, con la espera que elijas</span></div>
       ${d.items.map((it, i) => {
-        const r = app.state.replies.find((x) => x.id === it.replyId);
-        return `<div class="seqi">${r ? app.typeIcon(r.type, 14) : ''}<span class="n">${esc(r ? r.name : '(borrada)')}</span>
-          ${i > 0 ? `<span class="help" style="margin:0">esperar</span><input type="number" min="0" step="0.5" data-delay="${i}" value="${it.delay}"><span class="help" style="margin:0">s</span>` : ''}
-          <button type="button" class="ib" data-mv="${i}:-1" ${i === 0 ? 'disabled' : ''}>↑</button>
+        const ctl = `<button type="button" class="ib" data-mv="${i}:-1" ${i === 0 ? 'disabled' : ''}>↑</button>
           <button type="button" class="ib" data-mv="${i}:1" ${i === d.items.length - 1 ? 'disabled' : ''}>↓</button>
-          <button type="button" class="ib" data-rmi="${i}">${I('x', 14)}</button></div>`;
+          <button type="button" class="ib" data-rmi="${i}">${I('x', 14)}</button>`;
+        if (it.type === 'wait') {
+          return `<div class="seqi wait"><span class="ticon" style="background:#8d959922;color:#c0c6c9">${I('clock', 14)}</span><span class="n">Esperar</span>
+            <input type="number" min="0" step="1" data-wsecs="${i}" value="${it.secs}"><span class="help" style="margin:0">segundos</span>${ctl}</div>`;
+        }
+        const r = app.state.replies.find((x) => x.id === it.replyId);
+        const sim = r && r.type === 'audio' && r.asVoice !== false ? ` · 🎤 ${r.recReal ? 'duración del audio' : (r.recSecs ?? 3) + ' s'}` : r && r.type === 'text' && r.typing ? ` · ✍️ ${r.typing} s` : '';
+        return `<div class="seqi">${r ? app.typeIcon(r.type, 14) : ''}<span class="n">${esc(r ? r.name : '(borrada)')}<span class="help" style="margin:0">${sim}</span></span>${ctl}</div>`;
       }).join('')}
-      <div class="addseq" data-x="addseq">+ Agregar respuesta rápida</div>
+      <div class="seqbtns">
+        <div class="addseq" data-x="addseq">+ Agregar respuesta rápida</div>
+        <div class="addseq" data-x="addwait" style="color:var(--fg)">⏱ Agregar temporizador</div>
+      </div>
       ${pickerOpen ? `<div class="picker scroll">${avail.length ? avail.map((r) => `<div class="pi" data-addid="${r.id}">${app.typeIcon(r.type, 14)}<span class="grow">${esc(r.name)}</span></div>`).join('') : '<div class="empty">Primero creá respuestas de texto, audio, imagen, etc.</div>'}</div>` : ''}
-      <div class="help">Elige las respuestas rápidas que van a salir, en orden.</div>
+      <div class="help">Elegí las respuestas que van a salir, en orden, y poné temporizadores entre medio para que parezca más natural. Los “escribiendo…” y “grabando audio…” de cada respuesta también se respetan.</div>
       <div class="kv" style="margin-top:12px"><b>Después de disparar</b><div class="v">
         <select data-k="afterStage"><option value="">Nada. La conversación se queda donde está.</option>
           ${app.state.stages.map((s) => `<option value="${s.id}" ${d.afterStage === s.id ? 'selected' : ''}>Mover a “${esc(s.name)}”</option>`).join('')}</select>
@@ -135,12 +145,23 @@
           `<div class="field"><label>Mensaje <span class="req">*</span></label><textarea data-k="text" placeholder="Escribe tu mensaje aquí…">${esc(d.text)}</textarea>${chips('text')}</div>` +
           more('atajo, “escribiendo…”', shortcutField() +
             `<div class="sw ${d.typing ? 'on' : ''}" data-sw="typing"><span class="tr"></span><span>Simular “escribiendo…” antes de enviar</span></div>
+             <div class="help" style="margin:0 0 6px 42px">El otro ve “escribiendo…” durante esos segundos y después le llega el mensaje.</div>
              ${d.typing ? `<div class="row" style="margin:4px 0 10px 42px"><input type="number" min="1" max="60" step="1" data-k="typing" value="${d.typing}" style="width:80px"><span class="help" style="margin:0">segundos</span></div>` : ''}`);
         break;
       case 'audio':
         body = nameF + catF +
           `<div class="field"><label>Audio <span class="req">*</span></label>${mediaBlock()}</div>` +
-          sw('asVoice', 'Enviar como audio grabado al momento', 'Llega como mensaje de voz de WhatsApp, no como archivo adjunto. Mientras se envía, el otro ve “grabando audio…”.') +
+          sw('asVoice', 'Enviar como audio grabado al momento', 'Llega como mensaje de voz de WhatsApp (con su onda), no como archivo adjunto.') +
+          (d.asVoice !== false ? `<div class="item" style="margin:4px 0 12px">
+            <div class="lbl" style="margin-bottom:8px">🎤 Simular “grabando audio…” antes de enviar</div>
+            <div class="row" style="flex-wrap:wrap">
+              <input type="number" min="0" max="600" step="1" data-k="recSecs" value="${d.recReal ? '' : (d.recSecs ?? 3)}" ${d.recReal ? 'disabled' : ''} style="width:80px">
+              <span class="help" style="margin:0">segundos</span>
+              <span class="grow"></span>
+              <div class="sw ${d.recReal ? 'on' : ''}" data-sw="recReal" style="margin:0"><span class="tr"></span><span>lo que dura el audio${d._dur ? ` (${Math.round(d._dur)} s)` : ''}</span></div>
+            </div>
+            <div class="help">El otro ve “grabando audio…” durante ese tiempo y después le llega la nota de voz. Poné 0 para mandarlo al instante. Mientras tanto podés seguir con otros chats, y cancelarlo desde la barra de abajo (⏹).</div>
+          </div>` : '') +
           sw('viewOnce', 'Ver una sola vez') +
           more('atajo', shortcutField());
         break;
@@ -200,7 +221,16 @@
     if (f.size > MAX) return app.toast('El archivo es muy grande (máx. 64 MB).');
     draft._media = { name: f.name, mime: f.type || 'application/octet-stream', size: f.size, dataUrl: await HZ.fileToDataUrl(f), _new: true };
     if (!draft.name) draft.name = f.name.replace(/\.[^.]+$/, '');
+    draft._dur = 0;
     draw();
+    if (draft.type === 'audio') loadDur();
+  }
+
+  async function loadDur() {
+    const d = draft;
+    if (!d || !d._media || !HZ.audioDuration) return;
+    const dur = await HZ.audioDuration({ id: 'draft-' + d._media.dataUrl.length + '-' + (d._media.size || 0), dataUrl: d._media.dataUrl });
+    if (draft === d && dur) { d._dur = dur; draw(); }
   }
 
   async function toggleRec() {
@@ -222,7 +252,9 @@
       if (!wasActive || !draft) return;
       const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
       draft._media = { name: 'grabacion.' + (blob.type.includes('ogg') ? 'ogg' : 'webm'), mime: blob.type, size: blob.size, dataUrl: await HZ.fileToDataUrl(blob), _new: true };
+      draft._dur = 0;
       draw();
+      loadDur();
     };
     rec = { mr };
     mr.start();
@@ -239,7 +271,8 @@
     let sc = (d.shortcut || '').trim().replace(/\s+/g, '').replace(/^[;/]+/, '');
     if (sc && app.state.replies.some((r) => r.shortcut === sc && r.id !== d.id)) return app.toast(`El atajo ;${sc} ya lo usa otra respuesta.`);
     const old = d.id ? app.state.replies.find((r) => r.id === d.id) : null;
-    const { _media, ...clean } = d;
+    const { _media, _dur, ...clean } = d;
+    if (clean.type === 'audio') clean.recSecs = Math.max(0, Number(d.recSecs ?? 3));
     clean.shortcut = sc;
     clean.name = d.name.trim();
     clean.category = (d.category || '').trim();
@@ -279,7 +312,8 @@
     if (!draft) return;
     const t = e.target;
     if (t.dataset.k) draft[t.dataset.k] = t.dataset.k === 'typing' ? Number(t.value) : t.value;
-    if (t.dataset.delay !== undefined) draft.items[+t.dataset.delay].delay = Number(t.value) || 0;
+    if (t.dataset.wsecs !== undefined) draft.items[+t.dataset.wsecs].secs = Math.max(0, Number(t.value) || 0);
+    if (t.dataset.k === 'recSecs') draft.recSecs = Math.max(0, Number(t.value) || 0);
     updateMissing();
   });
   ov.addEventListener('change', (e) => {
@@ -296,6 +330,7 @@
     if (t.dataset.sw) {
       const k = t.dataset.sw;
       d[k] = k === 'typing' ? (d.typing ? 0 : 3) : !d[k];
+      if (k === 'recReal' && d.recReal && d._media && !d._dur) loadDur();
       return draw();
     }
     if (t.dataset.var) {
@@ -313,12 +348,11 @@
       const [i, dir] = t.dataset.mv.split(':').map(Number);
       const j = i + dir;
       [d.items[i], d.items[j]] = [d.items[j], d.items[i]];
-      if (j === 0 || i === 0) d.items[0].delay = 0;
       return draw();
     }
-    if (t.dataset.rmi !== undefined) { d.items.splice(+t.dataset.rmi, 1); if (d.items[0]) d.items[0].delay = 0; return draw(); }
+    if (t.dataset.rmi !== undefined) { d.items.splice(+t.dataset.rmi, 1); return draw(); }
     if (t.dataset.addid) {
-      d.items.push({ replyId: t.dataset.addid, delay: d.items.length ? app.state.settings.stepDelay : 0 });
+      d.items.push({ type: 'reply', replyId: t.dataset.addid });
       pickerOpen = false;
       return draw();
     }
@@ -331,6 +365,7 @@
       case 'rec': return toggleRec();
       case 'file': return modal.querySelector('[data-file]').click();
       case 'addseq': pickerOpen = !pickerOpen; return draw();
+      case 'addwait': d.items.push({ type: 'wait', secs: Number(app.state.settings.stepDelay) || 3 }); pickerOpen = false; return draw();
     }
   });
   ov.addEventListener('dragover', (e) => {

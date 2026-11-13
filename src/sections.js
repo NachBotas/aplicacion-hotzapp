@@ -238,7 +238,9 @@
 
   app.openChat = async (name) => {
     app.status('Abriendo chat…');
-    const ok = await wa.openChat(name);
+    let ok = false;
+    try { ok = await app.openChatFast(name); } catch (_) {}
+    if (!ok) ok = await wa.openChat(name);
     app.status(ok ? '✅ Chat abierto' : '⚠️ No encontré ese chat en la lista', ok ? 'ok' : 'err');
     return ok;
   };
@@ -319,6 +321,7 @@
       if (!c.phone && /^[+\d\s()-]{8,}$/.test(chat)) c.phone = chat;
       body.innerHTML = `
         <div class="item" style="margin-bottom:14px"><div class="t">💬 ${esc(chat)}</div><div class="m">${(S().notes[chat] || []).length} notas · <a href="#" data-goview="notes" style="color:#7aa7ff;text-decoration:none">ver notas</a></div></div>
+        ${(app.waLabels[chat] || []).length ? `<div class="field"><label>Etiquetas de WhatsApp</label><div class="chips">${app.waLabels[chat].map((l) => `<span class="vchip" style="cursor:default;border-color:${esc(l.color)};color:${esc(l.color)}">${esc(l.name)}</span>`).join('')}</div></div>` : ''}
         <div class="field"><label>Etapa del CRM</label><select data-lf="stageId"><option value="">Sin etapa</option>
           ${S().stages.map((s) => `<option value="${s.id}" ${c.stageId === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
         ${LEAD_FIELDS.map(([k, l, ph]) => `<div class="field"><label>${l}</label><input data-lf="${k}" value="${esc(c[k] || '')}" placeholder="${ph}"></div>`).join('')}
@@ -382,14 +385,22 @@
       const sw = (k, label) => `<div class="pref"><span class="grow">${label}</span><div class="sw ${s[k] ? 'on' : ''}" data-set="${k}"><span class="tr"></span></div></div>`;
       body.innerHTML = `
         <div class="field"><label>Tu nombre <span class="opt">(variable “Tu nombre”)</span></label><input data-setv="myName" value="${esc(s.myName)}" placeholder="Ej.: Nacho"></div>
-        <div class="field"><label>Espera por defecto entre mensajes de una secuencia</label><div class="row"><input type="number" min="0" step="0.5" data-setv="stepDelay" value="${s.stepDelay}" style="width:90px"><span class="help" style="margin:0">segundos</span></div></div>
+        <div class="field"><label>Duración por defecto de un temporizador nuevo (secuencias)</label><div class="row"><input type="number" min="0" step="0.5" data-setv="stepDelay" value="${s.stepDelay}" style="width:90px"><span class="help" style="margin:0">segundos</span></div></div>
         <h3 class="sec2">Barra de respuestas (abajo del chat)</h3>
         ${sw('showBar', 'Mostrar la barra de respuestas')}
         ${sw('directSend', 'Mensaje sale directo')}
         ${sw('directSequence', 'Secuencia sale directo')}
         <div class="pref"><span class="grow">Estilo de los chips</span><div class="seg"><button data-chip="icon" class="${s.chipStyle === 'icon' ? 'on' : ''}">Ícono</button><button data-chip="color" class="${s.chipStyle === 'color' ? 'on' : ''}">Color</button></div></div>
+        <h3 class="sec2">Envío de mensajes</h3>
+        <div class="item" style="margin-bottom:8px">${HZ.api && HZ.api.ready
+          ? '✅ <b>Motor rápido activo</b><div class="m">Los mensajes y audios salen al instante, podés seguir con otros chats mientras se envían y cancelarlos desde la barra de abajo.</div>'
+          : '⚠️ <b>Motor rápido no disponible</b><div class="m">Se está usando el modo compatibilidad (hace clic en WhatsApp, un envío a la vez, en el chat abierto). Recargá WhatsApp Web; si sigue así, puede que una actualización de WhatsApp lo haya roto.</div>'}</div>
+        <div class="pref"><span class="grow">Modo de envío</span><div class="seg"><button data-mode="fast" class="${s.sendMode !== 'dom' ? 'on' : ''}">Rápido</button><button data-mode="dom" class="${s.sendMode === 'dom' ? 'on' : ''}">Compatibilidad</button></div></div>
+        <h3 class="sec2">Lista de chats</h3>
+        ${sw('listShowStage', 'Mostrar la etapa del CRM al lado del nombre')}
+        ${sw('listShowLabels', 'Mostrar las etiquetas de WhatsApp Business')}
+        ${sw('listShowTimer', 'Mostrar el temporizador de espera (⏱)')}
         <h3 class="sec2">Panel</h3>
-        ${sw('showDots', 'Puntos de color del CRM en la lista de chats')}
         <div class="field"><label>Ancho del panel (px)</label><input type="number" min="280" max="600" data-setv="panelWidth" value="${s.panelWidth}"></div>
         <h3 class="sec2">Copia de seguridad</h3>
         <p class="hint">Exportá todo (respuestas, audios, imágenes, videos, documentos, CRM, notas y agenda) en un .zip para pasarlo a otra computadora.</p>
@@ -400,11 +411,12 @@
   };
   body.addEventListener('click', async (e) => {
     if (app.view !== 'tools') return;
-    const t = e.target.closest('[data-set],[data-chip]');
+    const t = e.target.closest('[data-set],[data-chip],[data-mode]');
     if (!t) return;
     const s = S().settings;
     if (t.dataset.set) return app.saveSettings({ [t.dataset.set]: !s[t.dataset.set] });
     if (t.dataset.chip) return app.saveSettings({ chipStyle: t.dataset.chip });
+    if (t.dataset.mode) return app.saveSettings({ sendMode: t.dataset.mode });
   });
   body.addEventListener('change', async (e) => {
     const t = e.target;

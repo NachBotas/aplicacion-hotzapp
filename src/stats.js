@@ -87,6 +87,7 @@
         <h3 class="sec2">Avisos</h3>
         <div class="pref"><span class="grow">Avisar cuando alguien espera respuesta</span><div class="sw ${s.waitAlert ? 'on' : ''}" data-stset="waitAlert"><span class="tr"></span></div></div>
         <div class="row" style="margin:4px 0 8px"><span class="grow help" style="margin:0">Avisar después de</span><input type="number" min="1" max="1440" data-stmin value="${s.waitMinutes}" style="width:80px"><span class="help" style="margin:0">min</span></div>
+        <div class="pref"><span class="grow">Mostrar el temporizador en la lista de chats</span><div class="sw ${s.listShowTimer ? 'on' : ''}" data-stset="listShowTimer"><span class="tr"></span></div></div>
         <div class="pref"><span class="grow">Incluir grupos en las estadísticas</span><div class="sw ${s.statsGroups ? 'on' : ''}" data-stset="statsGroups"><span class="tr"></span></div></div>
 
         <h3 class="sec2">Cómo se mide</h3>

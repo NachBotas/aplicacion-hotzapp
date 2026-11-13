@@ -310,9 +310,17 @@
 
   // ---------- audio como nota de voz ----------
   let audioSeq = 0;
-  function waitPage(type, id, timeout) {
+  function waitPage(type, id, timeout, isCancelled) {
     return new Promise((resolve, reject) => {
+      const iv = isCancelled && setInterval(() => {
+        if (!isCancelled()) return;
+        clearTimeout(t); clearInterval(iv);
+        window.removeEventListener('message', on);
+        const err = new Error('Envío cancelado'); err.cancelled = true;
+        reject(err);
+      }, 150);
       const t = setTimeout(() => {
+        clearInterval(iv);
         window.removeEventListener('message', on);
         reject(new Error('timeout:' + type));
       }, timeout);
@@ -320,11 +328,11 @@
         const d = e.data;
         if (e.source !== window || !d || d.__hz !== 'page' || d.id !== id) return;
         if (d.type === 'error') {
-          clearTimeout(t);
+          clearTimeout(t); clearInterval(iv);
           window.removeEventListener('message', on);
           reject(new Error(d.error));
         } else if (d.type === type) {
-          clearTimeout(t);
+          clearTimeout(t); clearInterval(iv);
           window.removeEventListener('message', on);
           resolve(d);
         }
@@ -359,7 +367,10 @@
     const t0 = Date.now();
     const tick = setInterval(() => onProgress && onProgress(Math.min(dur, (Date.now() - t0) / 1000), dur), 250);
     try {
-      await waitPage('ended', id, (dur + 15) * 1000);
+      await waitPage('ended', id, (dur + 15) * 1000, opts.isCancelled);
+    } catch (e) {
+      if (e.cancelled) { window.postMessage({ __hz: 'cs', type: 'cancel', id }, '*'); await cancelRecording(); }
+      throw e;
     } finally {
       clearInterval(tick);
     }
@@ -378,6 +389,12 @@
     if (!send) throw new Error('No encontré el botón para enviar la nota de voz.');
     realClick(send);
     await sleep(800);
+  }
+
+  // Descarta una grabación en curso (botón papelera de WhatsApp).
+  async function cancelRecording() {
+    const del = findButton(footer(), /(delete|trash|bin|ptt-cancel|cancel)/i, /(eliminar|borrar|descartar|delete|cancel)/i);
+    if (del) { realClick(del); await sleep(300); }
   }
 
   // ---------- abrir un chat ----------
@@ -419,6 +436,6 @@
   HZ.wa = {
     sleep, waitFor, visible, norm, sameChat,
     composeBox, searchBox, footer, chatTitle, digits,
-    sendText, insertText, sendFile, sendVoice, sendContact, openChat, realClick
+    sendText, insertText, sendFile, sendVoice, sendContact, openChat, realClick, cancelRecording
   };
 })();

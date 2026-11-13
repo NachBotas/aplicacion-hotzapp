@@ -20,6 +20,7 @@
   const origQuery = perms && perms.query ? perms.query.bind(perms) : null;
 
   let pending = null; // { id, audio: AudioBuffer, expires }
+  let playing = null; // fuente sonando ahora (para poder cancelar)
   let ctx = null;
   const getCtx = () => ctx || (ctx = new (window.AudioContext || window.webkitAudioContext)());
   const post = (d) => window.postMessage({ __hz: 'page', ...d }, '*');
@@ -41,6 +42,7 @@
       }
     } else if (m.type === 'cancel') {
       pending = null;
+      if (playing) { try { playing.onended = null; playing.stop(); } catch (_) {} playing = null; }
     }
   });
 
@@ -55,7 +57,8 @@
     src.connect(dest); // NO se conecta a los parlantes: no se escucha nada.
     const startAt = c.currentTime + 0.35; // margen para que arranque el grabador
     src.start(startAt);
-    src.onended = () => setTimeout(() => post({ type: 'ended', id }), 300);
+    playing = src;
+    src.onended = () => { playing = null; setTimeout(() => post({ type: 'ended', id }), 300); };
     post({ type: 'started', id, duration: audio.duration, ctxState: c.state });
     const stream = dest.stream;
     // Si la página pidió también video (no debería), lo pedimos de verdad.

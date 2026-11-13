@@ -50,7 +50,11 @@
       railCollapsed: false,
       waitAlert: true, // avisar cuando un cliente espera respuesta
       waitMinutes: 15,
-      statsGroups: false
+      statsGroups: false,
+      sendMode: 'fast', // 'fast' = WA-JS (rápido, varios chats a la vez) | 'dom' = compatibilidad
+      listShowStage: true, // etiqueta del CRM al lado del nombre
+      listShowLabels: true, // etiquetas de WhatsApp Business
+      listShowTimer: true // temporizador de espera
     }
   };
 
@@ -166,6 +170,20 @@
       .replace(/\{(\w+)\}/g, (m, k) => (k.toLowerCase() in map ? map[k.toLowerCase()] : m))
       .replace(/[ \t]+([,.!?])/g, '$1')
       .replace(/[ \t]{2,}/g, ' ');
+  };
+
+  // Pasos de una secuencia: [{type:'reply', replyId} | {type:'wait', secs}]
+  // (convierte el formato viejo con "delay" por mensaje)
+  HZ.seqItems = (r) => {
+    const out = [];
+    (r.items || []).forEach((it, i) => {
+      if (it.type === 'wait') out.push({ type: 'wait', secs: Number(it.secs) || 0 });
+      else {
+        if (i > 0 && Number(it.delay) > 0) out.push({ type: 'wait', secs: Number(it.delay) });
+        out.push({ type: 'reply', replyId: it.replyId });
+      }
+    });
+    return out;
   };
 
   HZ.escape = (s) =>

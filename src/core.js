@@ -107,15 +107,24 @@
     if (r.type === 'text') return r.text || '';
     if (r.type === 'contact') return `${r.contactName || ''} · ${r.contactPhone || ''}`;
     if (r.type === 'sequence') {
-      return (r.items || []).map((it, i) => {
+      return HZ.seqItems(r).map((it) => {
+        if (it.type === 'wait') return `⏱ ${it.secs} s`;
         const c = app.state.replies.find((x) => x.id === it.replyId);
-        return (i && it.delay ? `${it.delay} s → ` : '') + (c ? c.name : '(borrada)');
+        return c ? c.name : '(borrada)';
       }).join(' → ');
     }
     return r.caption || HZ.TYPES[r.type].label;
   };
 
-  app.seqDuration = (r) => (r.items || []).reduce((a, it) => a + (Number(it.delay) || 0), 0);
+  app.seqDuration = (r) =>
+    HZ.seqItems(r).reduce((a, it) => {
+      if (it.type === 'wait') return a + (Number(it.secs) || 0);
+      const c = app.state.replies.find((x) => x.id === it.replyId);
+      if (!c) return a;
+      if (c.type === 'text') return a + (Number(c.typing) || 0);
+      if (c.type === 'audio' && c.asVoice !== false) return a + (c.recReal ? 0 : Number(c.recSecs ?? 3));
+      return a;
+    }, 0);
 
   // ---------- etapas ----------
   app.setStage = async (name, stageId) => {
@@ -141,86 +150,7 @@
     try { resolve(await job()); } catch (e) { reject(e); } finally { busy = false; pump(); }
   }
 
-  async function runOne(r, ctx, direct) {
-    const fill = (t) => HZ.fillVars(t, ctx);
-    switch (r.type) {
-      case 'text':
-        if (direct) await wa.sendText(fill(r.text), { typing: r.typing });
-        else await wa.insertText(fill(r.text));
-        break;
-      case 'audio': {
-        const m = await HZ.getMedia(r.mediaId);
-        if (!m) throw new Error(`Falta el audio de “${r.name}”.`);
-        if (r.asVoice !== false) {
-          await wa.sendVoice(m.dataUrl, (t, d) => app.status(`🎤 Grabando “${r.name}”… ${Math.round(t)}s / ${Math.round(d)}s`, '', t / d), { viewOnce: r.viewOnce });
-        } else {
-          await wa.sendFile(await HZ.dataUrlToFile(m.dataUrl, m.name || 'audio.mp3', m.mime), { viewOnce: r.viewOnce, send: direct });
-        }
-        break;
-      }
-      case 'image':
-      case 'video':
-      case 'document': {
-        const m = await HZ.getMedia(r.mediaId);
-        if (!m) throw new Error(`Falta el archivo de “${r.name}”.`);
-        const file = await HZ.dataUrlToFile(m.dataUrl, m.name, m.mime);
-        await wa.sendFile(file, { caption: fill(r.caption || ''), viewOnce: r.type !== 'document' && r.viewOnce, send: direct });
-        break;
-      }
-      case 'contact':
-        await wa.sendContact(r.contactName, r.contactPhone);
-        break;
-    }
-  }
-
-  // Envía una respuesta (o secuencia) al chat abierto.
-  app.send = async (id, opts = {}) => {
-    const r = app.state.replies.find((x) => x.id === id);
-    if (!r) return false;
-    if (!wa.composeBox()) { app.lastError = 'Abrí un chat de WhatsApp primero.'; app.status(app.lastError, 'err'); return false; }
-    const direct = opts.direct ?? app.state.settings.directSend;
-    app.busyIds.add(id);
-    app.refreshBusy && app.refreshBusy();
-    try {
-      await app.enqueue(async () => {
-        const ctx = app.ctx();
-        if (r.type === 'sequence') {
-          const items = r.items || [];
-          for (let i = 0; i < items.length; i++) {
-            const child = app.state.replies.find((x) => x.id === items[i].replyId);
-            if (!child || child.type === 'sequence') continue;
-            const d = Number(items[i].delay) || 0;
-            if (i > 0 && d > 0) {
-              app.status(`⏳ ${r.name}: esperando ${d}s (${i + 1}/${items.length})…`);
-              await wa.sleep(d * 1000);
-            }
-            app.status(`➤ ${r.name}: enviando “${child.name}” (${i + 1}/${items.length})…`);
-            await runOne(child, ctx, true);
-            await bumpUses(child.id);
-          }
-          if (r.afterStage && ctx.chatName) await app.setStage(ctx.chatName, r.afterStage);
-        } else {
-          app.status(`➤ Enviando “${r.name}”…`);
-          await runOne(r, ctx, direct);
-        }
-        await bumpUses(r.id);
-      });
-      app.status(direct || r.type === 'sequence' ? `✅ “${r.name}” enviada` : `✍️ “${r.name}” lista para enviar`, 'ok');
-      return true;
-    } catch (e) {
-      app.lastError = e.message;
-      app.status('⚠️ ' + e.message, 'err');
-      return false;
-    } finally {
-      app.busyIds.delete(id);
-      app.refreshBusy && app.refreshBusy();
-    }
-  };
-
-  async function bumpUses(id) {
-    const replies = app.state.replies.map((x) => (x.id === id ? { ...x, uses: (x.uses || 0) + 1, lastUsed: Date.now() } : x));
-    await app.save({ replies });
-  }
+  // (el envío de respuestas está en engine.js)
 
   // ---------- riel izquierdo ----------
   app.counts = () => {

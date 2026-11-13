@@ -11,7 +11,7 @@
   // ---------- barra ----------
   const barHost = document.createElement('div');
   barHost.id = 'hotzapp-bar';
-  barHost.style.cssText = 'flex:none;width:100%;position:relative;z-index:5;';
+  barHost.style.cssText = 'flex:none;width:100%;min-width:0;max-width:100%;overflow:hidden;position:relative;z-index:5;';
   const broot = barHost.attachShadow({ mode: 'open' });
   broot.innerHTML = `<style>${HZ.PANEL_CSS}</style><div class="hz"><div class="cbar"></div></div>`;
   const bar = broot.querySelector('.cbar');
@@ -31,7 +31,8 @@
     if (!S()) return;
     const s = S().settings;
     if (s.barCollapsed) {
-      bar.innerHTML = `<button class="circle" data-b="expand" title="Mostrar respuestas rápidas">${I('plus', 14)}</button>`;
+      bar.innerHTML = `<button class="circle" data-b="expand" title="Mostrar respuestas rápidas">${I('plus', 14)}</button><div class="jobs"></div>`;
+      renderJobs();
       return;
     }
     const filtered = s.onlyFavorites || s.typeFilter.length;
@@ -47,11 +48,59 @@
         const icon = colored ? '' : `<span style="color:${T.color}">${I(T.icon, 15)}</span>`;
         const n = r.type === 'sequence' ? `<span class="n">${(r.items || []).length}</span>` : '';
         return `<button class="${cls}" ${style} data-chip="${r.id}" title="${esc(app.preview(r)).slice(0, 200)}">${icon}${esc(r.name)}${n}</button>`;
-      }).join('') : `<span style="color:var(--muted);font-size:12px;padding:4px">${S().replies.length ? 'Ninguna respuesta con estos filtros.' : 'Creá respuestas rápidas desde el panel ⚡'}</span>`}</div>`;
+      }).join('') : `<span style="color:var(--muted);font-size:12px;padding:4px">${S().replies.length ? 'Ninguna respuesta con estos filtros.' : 'Creá respuestas rápidas desde el panel ⚡'}</span>`}</div>
+      <div class="jobs"></div>`;
+    renderJobs();
   }
   app.renderBar = renderBar;
 
+  // ---------- envíos en curso: cuenta regresiva + cancelar ----------
+  function renderJobs() {
+    const box = bar.querySelector('.jobs');
+    if (!box) return;
+    const list = [...(app.jobs ? app.jobs.values() : [])];
+    const secs = (j) => (j.endsAt ? Math.max(0, Math.ceil((j.endsAt - Date.now()) / 1000)) : null);
+    // se actualiza en el lugar (sin redibujar) para que el clic en ⏹ nunca se pierda
+    const keep = new Set();
+    for (const j of list) {
+      keep.add(j.id);
+      let b = box.querySelector(`[data-canceljob="${j.id}"]`);
+      if (!b) {
+        b = document.createElement('button');
+        b.className = 'chip jobchip';
+        b.dataset.canceljob = j.id;
+        b.title = 'Cancelar el envío' + (j.chatName ? ' a ' + j.chatName : '');
+        b.innerHTML = `<span class="spin"></span><span class="lb"></span><b class="cd"></b><span class="x">${I('x', 12)}</span>`;
+        const all = box.querySelector('[data-cancelall]');
+        box.insertBefore(b, all);
+      }
+      const who = j.chatName ? j.chatName.split(' ')[0] + ' · ' : '';
+      const lb = who + (j.phase || j.label);
+      const s = secs(j);
+      const cd = s !== null ? s + 's' : '';
+      if (b.querySelector('.lb').textContent !== lb) b.querySelector('.lb').textContent = lb;
+      if (b.querySelector('.cd').textContent !== cd) b.querySelector('.cd').textContent = cd;
+    }
+    box.querySelectorAll('[data-canceljob]').forEach((b) => { if (!keep.has(b.dataset.canceljob)) b.remove(); });
+    let all = box.querySelector('[data-cancelall]');
+    if (list.length > 1) {
+      if (!all) {
+        all = document.createElement('button');
+        all.className = 'chip jobchip all';
+        all.dataset.cancelall = '1';
+        box.appendChild(all);
+      }
+      const t = `Cancelar todo (${list.length})`;
+      if (all.textContent !== t) all.innerHTML = `${I('stop', 12)} ${t}`;
+    } else if (all) all.remove();
+  }
+  app.onJobs = app.onJobs || [];
+  app.onJobs.push(renderJobs);
+  setInterval(() => { if (app.jobs && app.jobs.size) renderJobs(); }, 250);
+
   bar.addEventListener('click', async (e) => {
+    const c = e.target.closest('[data-canceljob],[data-cancelall]');
+    if (c) return c.dataset.cancelall ? app.cancelAll() : app.cancelJob(c.dataset.canceljob);
     const t = e.target.closest('[data-b],[data-chip]');
     if (!t) return;
     const s = S().settings;
@@ -218,5 +267,5 @@
       if (nb) { fpAnchor = nb; drawFilter(); placeFilter(); } else fp.hidden = true;
     }
   });
-  app.onBusy = renderBar;
+  app.onBusy = () => { renderBar(); renderJobs(); };
 })();

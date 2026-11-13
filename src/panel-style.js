@@ -207,11 +207,11 @@ h3.sec2 { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; colo
 .col footer { padding: 8px; }
 
 /* ---------- barra inferior ---------- */
-.cbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg); border-top: 1px solid var(--line); overflow: hidden; }
+.cbar { min-width: 0; max-width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg); border-top: 1px solid var(--line); overflow: hidden; }
 .cbar .circle { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; flex: none; border: 1px solid var(--line2); background: transparent; color: var(--muted); padding: 0; }
 .cbar .fbtn { width: 30px; height: 30px; background: var(--blue); color: #fff; border: 0; position: relative; }
 .cbar .fbtn .dot { position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: #fff; border: 2px solid var(--blue); }
-.chiprow { display: flex; gap: 8px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+.chiprow { display: flex; gap: 8px; overflow-x: auto; flex: 1; min-width: 0; scrollbar-width: none; }
 .chiprow::-webkit-scrollbar { display: none; }
 .chip { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; border: 1px solid var(--line2); border-radius: 20px; padding: 4px 12px; cursor: pointer; background: var(--bg2); color: var(--fg); font-size: 12.5px; flex: none; }
 .chip:hover { border-color: var(--muted); }
@@ -226,6 +226,21 @@ h3.sec2 { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; colo
 .fpop .fi { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
 .fpop hr { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
 .fpop .seg { margin: 4px 0 6px; }
+
+.jobs { display: flex; gap: 6px; flex: 0 1 auto; max-width: 55%; overflow-x: auto; scrollbar-width: none; margin-left: auto; padding-left: 6px; border-left: 1px solid var(--line); }
+.jobs::-webkit-scrollbar { display: none; }
+.jobs:empty { display: none; }
+.jobchip { background: rgba(240,82,82,.14); border-color: rgba(240,82,82,.5); color: #fca5a5; }
+.jobchip:hover { background: rgba(240,82,82,.25); border-color: #f05252; }
+.jobchip b { color: #fff; }
+.jobchip b:empty { display: none; }
+.jobchip .x { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: rgba(240,82,82,.35); color: #fff; margin-left: 2px; }
+.jobchip.all { background: #f05252; color: #fff; border-color: #f05252; }
+.spin { width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgba(252,165,165,.35); border-top-color: #fca5a5; animation: hzspin .8s linear infinite; }
+@keyframes hzspin { to { transform: rotate(360deg); } }
+.seqi.wait { background: transparent; border: 1px dashed var(--line2); }
+.seqbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wtags { display: inline-flex; gap: 4px; }
 
 /* popup ";" */
 .pop { position: fixed; z-index: 2147483001; background: #1d1f1f; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.5); max-height: 300px; overflow-y: auto; min-width: 320px; padding: 4px; }

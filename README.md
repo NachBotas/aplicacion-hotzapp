@@ -3,7 +3,10 @@
 Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 
 - **Respuestas rápidas de 7 tipos**: texto, audio, imagen, video, documento, contacto y **secuencias** (varias respuestas una tras otra, con espera, que al terminar pueden mover el chat a una etapa del CRM).
-- **Audios como recién grabados**: llegan como nota de voz y el otro ve "grabando audio…".
+- **Audios como recién grabados, al instante**: llegan como nota de voz (con su onda). Antes de mandarlo, el otro ve "grabando audio…" durante los segundos que elijas (o lo que dura el audio). No hay que esperar: podés pasar a otro chat mientras sale.
+- **Varios chats a la vez y botón ⏹ para cancelar**: cada envío aparece abajo, a la derecha de la barra, con cuenta regresiva; tocá la ✕ para cancelarlo (o "Cancelar todo").
+- **Temporizadores en las secuencias** ("⏱ Agregar temporizador") y "escribiendo…" configurable en los textos.
+- **Etiquetas en la lista de chats**: la etapa del CRM, las etiquetas de WhatsApp Business y el temporizador de espera, juntos al lado del nombre.
 - **Barra de chips debajo del chat** con filtro (solo favoritos, por tipo), estilo ícono/color, "Mensaje sale directo" y "Secuencia sale directo".
 - **Atajo `;`** en la caja de mensaje (por ej. `;hola` + Enter).
 - Categorías, favoritos, contador de usos y orden con arrastrar y soltar.
@@ -51,6 +54,12 @@ En WhatsApp Web vas a ver una barrita a la izquierda del chat (☰ menú, ⚡ re
 - **Tus archivos** se copian dentro de la extensión (aunque borres el original, la respuesta sigue andando), pero se pierden si desinstalás HotZapp o borrás los datos de Chrome: hacé backups seguido y guardá los originales juntos en una carpeta.
 - **Uso responsable**: no la uses para spam ni envíos masivos. WhatsApp puede restringir números con muchos reportes. HotZapp no está afiliada a WhatsApp ni a Meta.
 
+## Motor de envío
+
+HotZapp usa [WA-JS](https://github.com/wppconnect-team/wa-js) (WPPConnect, licencia Apache 2.0, incluida en `lib/`) para mandar mensajes directamente desde WhatsApp Web: es lo que permite enviar audios como nota de voz al instante, mandar a un chat aunque no esté abierto y mostrar "escribiendo…" / "grabando audio…". Está configurado para **no** enviar analíticas ni usar servidores externos (`src/wpp-config.js`).
+
+Si WA-JS no carga (por ejemplo, justo después de una actualización de WhatsApp), HotZapp pasa solo al **modo compatibilidad** (hace clic en la página, un envío a la vez y en el chat abierto). El estado se ve en Menú → Herramientas → Envío de mensajes.
+
 ## Estructura
 
 ```
@@ -60,7 +69,12 @@ src/inject.js         Corre en la página: convierte el audio guardado en "micr�
 src/storage.js        Datos (chrome.storage.local), tipos y variables
 src/icons.js          Íconos
 src/wa.js             Automatización de WhatsApp Web (texto, archivos, voz, contacto, abrir chats)
-src/core.js           Estado, panel, barrita lateral y motor de envío
+src/core.js           Estado, panel y barrita lateral
+src/engine.js         Motor de envíos: rápido (WA-JS) o compatibilidad, cola por chat, cancelar
+src/bridge.js         Puente con WA-JS dentro de la página
+src/wpp-config.js     Configuración de WA-JS (sin analíticas ni servidores externos)
+src/deco.js           Etiquetas y temporizador al lado de cada chat
+lib/                  WA-JS (WPPConnect, Apache 2.0)
 src/editor.js         Editor de respuestas (7 tipos)
 src/sections.js       Menú, Respuestas, Pendientes, Agenda, Datos del lead, Notas, Herramientas y CRM
 src/bar.js            Barra de chips debajo del chat y atajo ";"
