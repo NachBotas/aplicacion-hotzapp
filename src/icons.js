@@ -33,6 +33,7 @@
     listCheck: '<path d="m3 6 2 2 3-3M3 13l2 2 3-3M11 6h10M11 13h10M11 20h10"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     check: '<path d="m5 12 5 5L20 7"/>',
+    chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
     download: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
     archive: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>',
     upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',

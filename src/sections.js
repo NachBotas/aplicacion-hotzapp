@@ -24,6 +24,7 @@
         <div class="sec">Tu día</div>
         ${mi('tasks', 'bell', 'Pendientes', c.tasks, true)}
         ${mi('agenda', 'calendar', 'Agenda', c.agenda)}
+        ${mi('stats', 'chart', 'Estadísticas', app.waitingCount || 0, true)}
         ${mi('crm', 'kanban', 'CRM')}
         <div class="sec">Esta conversación</div>
         ${mi('lead', 'lead', 'Datos del lead')}

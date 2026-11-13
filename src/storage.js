@@ -47,7 +47,10 @@
       typeFilter: [], // tipos a mostrar en la barra ([] = todos)
       showDots: true,
       panelWidth: 340,
-      railCollapsed: false
+      railCollapsed: false,
+      waitAlert: true, // avisar cuando un cliente espera respuesta
+      waitMinutes: 15,
+      statsGroups: false
     }
   };
 

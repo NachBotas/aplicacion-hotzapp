@@ -249,6 +249,7 @@
          ${b('tasks', 'listCheck', 'Pendientes', c.tasks, true)}
          ${b('notes', 'notes', 'Notas del chat', c.notes)}
          ${b('agenda', 'calendar', 'Agenda', c.agenda)}
+         ${b('stats', 'chart', 'Estadísticas · clientes esperando', app.waitingCount || 0, true)}
          ${b('crm', 'kanban', 'CRM')}`;
   }
   app.renderRail = renderRail;
