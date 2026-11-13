@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "HotZapp – Respuestas rápidas para WhatsApp Web",
+  "short_name": "HotZapp",
+  "version": "1.0.0",
+  "description": "Respuestas rápidas con texto, imágenes y audios (como nota de voz), embudo de ventas con etiquetas y mensajes programados para WhatsApp Web.",
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": { "default_title": "HotZapp", "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png" } },
+  "options_page": "options/options.html",
+  "permissions": ["storage", "unlimitedStorage", "notifications"],
+  "host_permissions": ["https://web.whatsapp.com/*"],
+  "background": { "service_worker": "src/background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["src/inject.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["src/storage.js", "src/wa.js", "src/panel-style.js", "src/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
