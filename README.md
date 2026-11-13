@@ -4,6 +4,7 @@ Extensión de Chrome (y Edge, Brave, Opera) que agrega a **WhatsApp Web**:
 
 - **Respuestas rápidas de 7 tipos**: texto, audio, imagen, video, documento, contacto y **secuencias** (varias respuestas una tras otra, con espera, que al terminar pueden mover el chat a una etapa del CRM).
 - **Audios como recién grabados, al instante**: llegan como nota de voz (con su onda). Antes de mandarlo, el otro ve "grabando audio…" durante los segundos que elijas (o lo que dura el audio). No hay que esperar: podés pasar a otro chat mientras sale.
+- **Cualquier formato de audio**: WAV, MP3, M4A, WEBM… se convierte solo a OGG Opus (el formato de las notas de voz de WhatsApp), así WhatsApp no lo rechaza.
 - **Varios chats a la vez y botón ⏹ para cancelar**: cada envío aparece abajo, a la derecha de la barra, con cuenta regresiva; tocá la ✕ para cancelarlo (o "Cancelar todo").
 - **Secuencias completas en un solo lugar**: dentro de la secuencia creás cada mensaje (texto, audio, imagen, video, documento o contacto) sin tener que crearlos antes por separado; también podés sumar respuestas ya guardadas.
 - **Temporizadores en las secuencias** ("⏱ Agregar temporizador") y "escribiendo…" configurable en los textos.
@@ -73,6 +74,7 @@ src/storage.js        Datos (chrome.storage.local), tipos y variables
 src/icons.js          Íconos
 src/wa.js             Automatización de WhatsApp Web (texto, archivos, voz, contacto, abrir chats)
 src/core.js           Estado, panel y barrita lateral
+src/audioconv.js      Convierte cualquier audio (wav, mp3, m4a, webm…) a OGG Opus, el formato de notas de voz de WhatsApp
 src/engine.js         Motor de envíos: rápido (WA-JS) o compatibilidad, cola por chat, cancelar
 src/bridge.js         Puente con WA-JS dentro de la página
 src/wpp-config.js     Configuración de WA-JS (sin analíticas ni servidores externos)

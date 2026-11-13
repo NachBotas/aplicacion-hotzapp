@@ -146,8 +146,12 @@
         break;
       }
       case 'audio': {
-        const m = await media(r);
+        let m = await media(r);
         const voice = r.asVoice !== false;
+        // WhatsApp sólo acepta OGG Opus como nota de voz: convertimos wav/mp3/webm/m4a
+        setPhase(job, `🔄 ${r.name}`);
+        m = await HZ.ensureVoiceMedia(m);
+        check(job);
         if (voice) {
           const secs = await recSecs(r, m);
           if (secs > 0) {
@@ -157,7 +161,7 @@
         }
         check(job);
         setPhase(job, `➤ ${r.name}`);
-        const o = { type: 'audio', isPtt: voice, filename: m.name };
+        const o = { type: 'audio', isPtt: voice, filename: m.name, mimetype: 'audio/ogg; codecs=opus' };
         if (voice) o.waveform = true;
         if (r.viewOnce) o.isViewOnce = true;
         await api.call('sendFile', id, m.dataUrl, o);
@@ -286,8 +290,10 @@
         app.status(`⏹ Envío cancelado: “${r.name}”`, 'ok');
         app.lastError = 'Envío cancelado';
       } else {
-        app.lastError = e.message;
-        app.status('⚠️ ' + e.message, 'err');
+        let msg = e.message || String(e);
+        if (/InvalidMedia|MediaCheck|media type|unsupported/i.test(msg)) msg = `WhatsApp rechazó el archivo de “${r.name}” (formato no válido). Probá cargarlo de nuevo en MP3, OGG o WAV.`;
+        app.lastError = msg;
+        app.status('⚠️ ' + msg, 'err');
       }
       return false;
     } finally {

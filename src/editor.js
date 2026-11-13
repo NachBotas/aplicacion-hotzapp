@@ -7,7 +7,7 @@
   const esc = HZ.escape;
 
   const ACCEPT = {
-    audio: { accept: 'audio/*,.ogg,.mp3,.m4a,.wav,.opus', hint: '.ogg, .mp3' },
+    audio: { accept: 'audio/*,.ogg,.opus,.mp3,.m4a,.aac,.wav,.webm,.flac', hint: '.mp3, .wav, .ogg, .m4a…' },
     image: { accept: 'image/png,image/jpeg,image/webp,image/gif', hint: 'Formatos: .png, .jpg, .webp' },
     video: { accept: 'video/mp4,video/3gpp,video/*', hint: 'Formatos: .mp4, .3gp' },
     document: { accept: '*/*', hint: 'Formatos: .pdf, .doc, .xls, .csv, .zip y otros' }
@@ -112,7 +112,7 @@
         <button type="button" class="big ${recHere ? 'rec' : ''}" data-x="rec"${A}>${I(recHere ? 'stop' : 'mic', 20)}${recHere ? 'Detener grabación' : 'Grabar ahora'}${recHere ? '<small>● grabando…</small>' : ''}</button>
         <button type="button" class="big" data-x="file"${A}>${I('file', 20)}Elegir archivo<small>${ACCEPT.audio.hint}</small></button>
       </div><input type="file" hidden accept="${ACCEPT.audio.accept}" data-file${A}>
-      ${A ? '' : '<div class="help">Se guarda una copia dentro de Whazaa y entra en tu <b>Copia de seguridad</b>.</div>'}`;
+      ${A ? '' : '<div class="help">Acepta cualquier audio (mp3, wav, m4a, ogg…): se convierte solo al formato de notas de voz de WhatsApp. Se guarda una copia dentro de Whazaa y entra en tu <b>Copia de seguridad</b>.</div>'}`;
     }
     return `<div class="drop" data-drop${A}>Haz clic aquí o arrastra el archivo.<small>${ACCEPT[d.type].hint}</small></div>
       ${A ? '' : '<div class="help">Se guarda una copia dentro de Whazaa y entra en tu <b>Copia de seguridad</b>. Te recomendamos tener los originales juntos en una carpeta.</div>'}
@@ -327,8 +327,31 @@
     clean.name = d.name.trim();
     clean.category = (d.category || '').trim();
     clean.typing = Number(d.typing) || 0;
-    if (_media && _media._new) {
-      const { _new, ...m } = _media;
+    const btn = modal.querySelector('[data-x="save"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+    const voiceConv = async (m, type) => {
+      if (type !== 'audio') return m;
+      try {
+        const v = await HZ.toVoiceFormat(m);
+        const { converted, ...rest } = v;
+        return rest;
+      } catch (err) {
+        app.toast('⚠️ ' + err.message, 6000);
+        throw err;
+      }
+    };
+    let _m = _media;
+    try {
+      if (_m && _m._new) _m = { ...(await voiceConv(_m, clean.type)), _new: true };
+      if (clean.type === 'sequence') {
+        for (const it of d.items) if (it.type === 'msg' && it.msg._media && it.msg._media._new && it.msg.type === 'audio') it.msg._media = { ...(await voiceConv(it.msg._media, 'audio')), _new: true };
+      }
+    } catch (_) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+      return;
+    }
+    if (_m && _m._new) {
+      const { _new, ...m } = _m;
       clean.mediaId = (await HZ.saveMedia({ ...m, id: undefined })).id;
       if (old && old.mediaId) await HZ.deleteMedia(old.mediaId);
     }
