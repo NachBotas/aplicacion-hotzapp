@@ -48,6 +48,7 @@
       const was = api.ready;
       api.ready = !!(s.ready && s.auth !== false);
       api.version = s.version;
+      api.patched = s.patched || null;
       if (was !== api.ready) {
         app.onJobs.forEach((f) => f());
         if (app.open && app.view === 'tools') app.render();
@@ -58,7 +59,8 @@
   }
   poll();
   setInterval(poll, 3000);
-  app.fastMode = () => api.ready && app.state.settings.sendMode !== 'dom';
+  // Si el motor rápido falló por incompatibilidad, en esta sesión se usa compatibilidad.
+  app.fastMode = () => api.ready && !api.broken && app.state.settings.sendMode !== 'dom';
 
   // ---------------- trabajos (envíos en curso) ----------------
   const jobs = (app.jobs = new Map());
@@ -223,7 +225,27 @@
     }
   }
 
-  const runStep = (job, r, ctx, direct) => (job.fast ? fastOne(job, r, ctx) : domOne(job, r, ctx, direct));
+  // Errores internos de WhatsApp/WA-JS (versión de WhatsApp incompatible): en vez
+  // de mostrar el error, se pasa al modo compatibilidad y se manda igual.
+  const INTERNAL = /is not a function|Cannot read properties|undefined is not|not available|Cannot destructure|invalid_data_url|is not a constructor|Module .* not found/i;
+  async function runStep(job, r, ctx, direct) {
+    if (!job.fast) return domOne(job, r, ctx, direct);
+    try {
+      return await fastOne(job, r, ctx);
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      if (e && e.cancelled) throw e;
+      if (!INTERNAL.test(msg)) throw e;
+      api.broken = msg;
+      console.warn('Whazaa: el motor rápido falló, uso modo compatibilidad:', msg);
+      if (!wa.sameChat(wa.chatTitle(), job.chatName)) {
+        throw new Error(`El motor rápido no funciona con esta versión de WhatsApp. Abrí el chat de ${job.chatName} y volvé a enviarlo (se usa el modo compatibilidad).`);
+      }
+      job.fast = false;
+      app.toast('⚙️ Esta versión de WhatsApp no es compatible con el motor rápido: se usa el modo compatibilidad.', 5000);
+      return domOne(job, r, ctx, direct);
+    }
+  }
 
   async function bumpUses(id) {
     if (!app.state.replies.some((x) => x.id === id)) return;

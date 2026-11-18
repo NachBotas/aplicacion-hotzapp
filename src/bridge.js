@@ -17,11 +17,39 @@
   const SYSTEM = new Set(['e2e_notification', 'notification_template', 'notification', 'gp2', 'call_log', 'protocol', 'ciphertext', 'broadcast_notification', 'debug']);
   const isUser = (m) => m && !SYSTEM.has(m.type) && !m.isNotification;
 
+  // Parche de compatibilidad: algunas versiones de WhatsApp Web ya no tienen
+  // UserPrefs.getMeLidUserOrThrow y WA-JS falla con
+  // "n.UserPrefs.getMeLidUserOrThrow is not a function". La recreamos con las
+  // funciones equivalentes que sí existen (mismo método que usa WA-JS para otras).
+  let patched = null;
+  function patchUserPrefs() {
+    try {
+      const U = W() && W().whatsapp && W().whatsapp.UserPrefs;
+      if (!U || typeof U.getMeLidUserOrThrow === 'function') return;
+      const pick = (...names) => names.map((n) => U[n]).find((f) => typeof f === 'function');
+      const lid = pick('getMaybeMeLidUser', 'getMeLidUser', 'getMaybeMeLid');
+      const pn = pick('getMaybeMePnUser', 'getMaybeMeUser', 'getMeUser');
+      Object.defineProperty(U, 'getMeLidUserOrThrow', {
+        configurable: true,
+        writable: true,
+        value() {
+          const l = lid && lid.call(U);
+          if (l) return l;
+          const p = pn && pn.call(U);
+          if (p) return p;
+          throw new Error('WhatsApp no informa tu usuario todavía');
+        }
+      });
+      patched = 'getMeLidUserOrThrow';
+    } catch (_) {}
+  }
+
   const M = {
     status() {
+      if (ready()) patchUserPrefs();
       let auth = null;
       try { auth = ready() && W().conn && W().conn.isAuthenticated ? !!W().conn.isAuthenticated() : null; } catch (_) {}
-      return { ready: ready(), auth, version: W() && W().version };
+      return { ready: ready(), auth, version: W() && W().version, patched };
     },
     activeChat() {
       const c = W().chat.getActiveChat();
@@ -130,6 +158,7 @@
     try {
       if (!Object.prototype.hasOwnProperty.call(M, method)) throw new Error('método desconocido');
       if (method !== 'status' && !ready()) throw new Error('El motor rápido todavía no está listo');
+      if (method !== 'status') patchUserPrefs();
       const result = await M[method](...(args || []));
       window.postMessage({ __hz: 'rpcres', id, ok: true, result }, '*');
     } catch (err) {

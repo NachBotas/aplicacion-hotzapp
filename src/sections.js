@@ -464,9 +464,10 @@
         ${sw('directSequence', 'Secuencia sale directo')}
         <div class="pref"><span class="grow">Estilo de los chips</span><div class="seg"><button data-chip="icon" class="${s.chipStyle === 'icon' ? 'on' : ''}">Ícono</button><button data-chip="color" class="${s.chipStyle === 'color' ? 'on' : ''}">Color</button></div></div>
         <h3 class="sec2">Envío de mensajes</h3>
-        <div class="item" style="margin-bottom:8px">${HZ.api && HZ.api.ready
+        ${HZ.api && HZ.api.broken ? `<div class="item" style="margin-bottom:8px;border:1px solid #f5a524">⚠️ <b>El motor rápido falló con esta versión de WhatsApp</b><div class="m">Se está usando el modo compatibilidad hasta que recargues WhatsApp Web. Detalle: ${esc(HZ.api.broken).slice(0, 140)}</div></div>` : ''}
+        ${HZ.api && HZ.api.broken ? '' : `<div class="item" style="margin-bottom:8px">${HZ.api && HZ.api.ready
           ? '✅ <b>Motor rápido activo</b><div class="m">Los mensajes y audios salen al instante, podés seguir con otros chats mientras se envían y cancelarlos desde la barra de abajo.</div>'
-          : '⚠️ <b>Motor rápido no disponible</b><div class="m">Se está usando el modo compatibilidad (hace clic en WhatsApp, un envío a la vez, en el chat abierto). Recargá WhatsApp Web; si sigue así, puede que una actualización de WhatsApp lo haya roto.</div>'}</div>
+          : '⚠️ <b>Motor rápido no disponible</b><div class="m">Se está usando el modo compatibilidad (hace clic en WhatsApp, un envío a la vez, en el chat abierto). Recargá WhatsApp Web; si sigue así, puede que una actualización de WhatsApp lo haya roto.</div>'}</div>`}
         <div class="pref"><span class="grow">Modo de envío</span><div class="seg"><button data-mode="fast" class="${s.sendMode !== 'dom' ? 'on' : ''}">Rápido</button><button data-mode="dom" class="${s.sendMode === 'dom' ? 'on' : ''}">Compatibilidad</button></div></div>
         <h3 class="sec2">Lista de chats</h3>
         ${sw('listShowStage', 'Mostrar también la etapa del CRM de Whazaa (opcional)')}
